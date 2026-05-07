@@ -3,98 +3,146 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>Sales Team Timesheet</title>
+<title>Sales Timesheet</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Sora:wght@300;400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/flatpickr.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/flatpickr.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#0f1117;--surface:#181c26;--surface2:#1e2330;--border:#2a3045;
-  --text:#eef0f6;--muted:#6b7494;
-  --green:#2de399;--green-dim:#1a7a56;
-  --red:#ff5c5c;--red-dim:#7a2222;
-  --blue:#4f9cf9;--amber:#f9c94f;
+  --bg:#ffffff;--surface:#f8f9fb;--surface2:#f0f2f5;--border:#e2e6ef;
+  --text:#1a1d2e;--muted:#8892a4;
+  --green:#16a05a;--green-dim:#a7f3d0;--green-bg:rgba(21,128,75,.08);
+  --red:#dc2626;--red-dim:#fecaca;--red-bg:rgba(180,30,30,.08);
+  --blue:#1565c0;--blue-bg:rgba(21,101,192,.08);
+  --amber:#b45309;--amber-bg:rgba(180,120,10,.08);
+  --purple:#a78bfa;
   --mono:'DM Mono',monospace;--sans:'Sora',sans-serif;
   --r:14px;--rs:8px;
 }
-body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:100vh;padding-bottom:60px;-webkit-font-smoothing:antialiased}
-header{background:var(--surface);border-bottom:1px solid var(--border);padding:18px 20px 14px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10}
-.hlogo{display:flex;align-items:center;gap:10px}
-.dot{width:10px;height:10px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);flex-shrink:0;transition:background .3s,box-shadow .3s}
-.dot.red{background:var(--red);box-shadow:0 0 8px var(--red)}
-header h1{font-size:15px;font-weight:600;letter-spacing:.04em;text-transform:uppercase}
-#liveClock{font-family:var(--mono);font-size:13px;color:var(--muted);letter-spacing:.05em}
-.main{max-width:540px;margin:0 auto;padding:24px 16px 0}
-.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:20px;margin-bottom:16px}
-.clabel{font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:14px}
-.name-row{display:flex;gap:10px}
-.fg{flex:1;display:flex;flex-direction:column;gap:6px}
-.fg label{font-size:11px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;font-weight:500}
-.fg input{background:var(--surface2);border:1px solid var(--border);border-radius:var(--rs);color:var(--text);font-family:var(--sans);font-size:14px;padding:10px 12px;width:100%;outline:none;transition:border-color .2s}
-.fg input:focus{border-color:var(--blue)}
-.fg input::placeholder{color:var(--muted);opacity:.6}
-.fg input:disabled{opacity:.4;cursor:not-allowed}
-.status-bar{background:var(--surface2);border:1px solid var(--border);border-radius:var(--rs);padding:10px 14px;font-family:var(--mono);font-size:12px;color:var(--muted);margin-bottom:16px;display:flex;align-items:center;gap:8px;min-height:40px;transition:all .3s}
-.status-bar.active{border-color:var(--green-dim);color:var(--green);background:rgba(45,227,153,.05)}
-.status-bar.locating{border-color:var(--amber);color:var(--amber);background:rgba(249,201,79,.05)}
-.pulse{width:7px;height:7px;border-radius:50%;background:currentColor;flex-shrink:0;animation:blink 1.4s infinite}
-@keyframes blink{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.7)}}
-.btn-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.btn{padding:16px 12px;border-radius:var(--r);border:1.5px solid;font-family:var(--sans);font-size:15px;font-weight:600;cursor:pointer;transition:all .15s;display:flex;flex-direction:column;align-items:center;gap:6px;-webkit-tap-highlight-color:transparent}
-.btn:active{transform:scale(.97)}
-.btn:disabled{opacity:.3;cursor:not-allowed;transform:none}
-.btn-icon{font-size:26px;line-height:1}
-.btn-in{background:rgba(45,227,153,.08);border-color:var(--green-dim);color:var(--green)}
-.btn-in:not(:disabled):hover{background:rgba(45,227,153,.16);border-color:var(--green)}
-.btn-out{background:rgba(255,92,92,.08);border-color:var(--red-dim);color:var(--red)}
-.btn-out:not(:disabled):hover{background:rgba(255,92,92,.16);border-color:var(--red)}
-.session-timer{text-align:center;margin-top:14px;font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:.08em}
-.session-timer span{color:var(--green);font-size:18px;display:block;margin-top:2px}
-.log-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
-.export-btn{font-family:var(--sans);font-size:11px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--blue);background:rgba(79,156,249,.1);border:1px solid rgba(79,156,249,.3);border-radius:6px;padding:5px 12px;cursor:pointer;transition:all .15s}
-.export-btn:hover{background:rgba(79,156,249,.18)}
-.log-empty{text-align:center;padding:30px 0;color:var(--muted);font-size:13px;font-family:var(--mono)}
-.log-entry{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:10px;animation:slideIn .25s ease;position:relative}
-@keyframes slideIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
-.entry-name{font-size:14px;font-weight:600;color:var(--text);margin-bottom:4px}
-.entry-times{font-family:var(--mono);font-size:12px;margin-bottom:6px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
-.chip{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:5px;font-size:11px}
-.chip-in{background:rgba(45,227,153,.1);color:var(--green);border:1px solid rgba(45,227,153,.2)}
-.chip-out{background:rgba(255,92,92,.1);color:var(--red);border:1px solid rgba(255,92,92,.2)}
-.chip-dur{background:rgba(79,156,249,.1);color:var(--blue);border:1px solid rgba(79,156,249,.2)}
-.chip-wait{background:rgba(249,201,79,.1);color:var(--amber);border:1px solid rgba(249,201,79,.2);animation:blink 1.8s infinite}
-.entry-loc{font-size:11px;color:var(--muted);display:flex;gap:5px;align-items:flex-start;line-height:1.5}
-.del-btn{position:absolute;top:10px;right:12px;background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;padding:4px;border-radius:4px;line-height:1;transition:color .15s}
-.del-btn:hover{color:var(--red)}
-.total-bar{background:var(--surface2);border:1px solid var(--border);border-radius:var(--rs);padding:12px 16px;margin-top:6px;display:flex;justify-content:space-between;align-items:center}
-.total-label{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:500}
-.total-val{font-family:var(--mono);font-size:15px;color:var(--blue);font-weight:500}
-.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 20px;font-size:13px;color:var(--text);font-family:var(--mono);opacity:0;transition:all .3s;pointer-events:none;white-space:nowrap;z-index:100}
-.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:100vh;padding-bottom:80px;-webkit-font-smoothing:antialiased}
 
-/* ── Permission modal overlay ── */
-.overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:50;display:flex;align-items:center;justify-content:center;padding:20px;opacity:0;pointer-events:none;transition:opacity .25s}
-.overlay.show{opacity:1;pointer-events:all}
-.modal{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:28px 24px;max-width:360px;width:100%;text-align:center;transform:translateY(16px);transition:transform .25s}
-.overlay.show .modal{transform:translateY(0)}
-.modal-icon{font-size:44px;margin-bottom:16px;line-height:1}
-.modal h2{font-size:17px;font-weight:700;color:var(--text);margin-bottom:10px}
-.modal p{font-size:13px;color:var(--muted);line-height:1.7;margin-bottom:22px}
-.modal-why{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:22px;text-align:left}
+/* ── Header ── */
+header{background:#fff;border-bottom:1px solid var(--border);padding:16px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:20;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.hlogo{display:flex;align-items:center;gap:10px}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--green);box-shadow:0 0 7px var(--green);flex-shrink:0}
+header h1{font-size:14px;font-weight:600;letter-spacing:.05em;text-transform:uppercase}
+#liveClock{font-family:var(--mono);font-size:12px;color:var(--muted)}
+
+/* ── Layout ── */
+.main{max-width:700px;margin:0 auto;padding:20px 14px 0}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:20px;margin-bottom:14px}
+.clabel{font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:14px}
+
+/* ── Setup screen ── */
+.setup-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:end}
+@media(max-width:500px){.setup-grid{grid-template-columns:1fr}}
+.fg{display:flex;flex-direction:column;gap:6px}
+.fg label{font-size:11px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;font-weight:500}
+.fg input,.fg select{background:var(--surface2);border:1px solid var(--border);border-radius:var(--rs);color:var(--text);font-family:var(--sans);font-size:14px;padding:10px 12px;width:100%;outline:none;transition:border-color .2s}
+.fg input:focus,.fg select:focus{border-color:var(--blue)}
+.fg input::placeholder{color:var(--muted);opacity:.6}
+.load-btn{width:100%;padding:12px;border-radius:var(--rs);border:none;background:var(--blue);color:#fff;font-family:var(--sans);font-size:14px;font-weight:600;cursor:pointer;transition:all .15s}
+.load-btn:hover{background:#3a88e8}
+.load-btn:active{transform:scale(.98)}
+
+/* ── Pay period banner ── */
+.period-banner{background:var(--surface2);border:1px solid var(--border);border-radius:var(--rs);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px}
+.period-name{font-size:15px;font-weight:600;color:var(--text)}
+.period-dates{font-family:var(--mono);font-size:12px;color:var(--muted)}
+.back-btn{background:none;border:1px solid var(--border);border-radius:var(--rs);color:var(--muted);font-family:var(--sans);font-size:12px;padding:5px 12px;cursor:pointer;transition:all .15s}
+.back-btn:hover{color:var(--text);border-color:var(--muted)}
+
+/* ── Week label ── */
+.week-label{font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:16px 0 8px;padding-left:2px}
+
+/* ── Day card ── */
+.day-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;margin-bottom:8px;overflow:hidden;transition:border-color .2s}
+.day-card.today{border-color:rgba(79,156,249,.4)}
+.day-card.weekend{opacity:.55}
+.day-card.future{opacity:.35;pointer-events:none}
+.day-head{display:flex;align-items:center;gap:12px;padding:12px 14px}
+.day-name{font-size:14px;font-weight:600;color:var(--text);min-width:95px}
+.day-date{font-family:var(--mono);font-size:11px;color:var(--muted);flex:1}
+.today-badge{font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;background:var(--blue-bg);color:var(--blue);border:1px solid rgba(79,156,249,.25);border-radius:4px;padding:2px 7px}
+.day-total{font-family:var(--mono);font-size:12px;color:var(--blue);font-weight:500;margin-right:4px}
+.clock-in-btn,.clock-out-btn{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:var(--rs);font-size:12px;font-weight:600;font-family:var(--sans);cursor:pointer;border:none;transition:all .15s;white-space:nowrap;-webkit-tap-highlight-color:transparent}
+.clock-in-btn{background:var(--green-bg);color:var(--green);border:1px solid var(--green-dim)}
+.clock-in-btn:hover{background:rgba(45,227,153,.16)}
+.clock-out-btn{background:var(--red-bg);color:var(--red);border:1px solid var(--red-dim)}
+.clock-out-btn:hover{background:rgba(255,92,92,.16)}
+.clock-in-btn:active,.clock-out-btn:active{transform:scale(.96)}
+
+/* ── Punch records ── */
+.punches{border-top:1px solid var(--border);padding:0 14px 10px}
+.punch-row{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;padding:8px 0;border-bottom:1px solid rgba(42,48,69,.6)}
+.punch-row:last-child{border-bottom:none}
+.punch-times{display:flex;flex-direction:column;gap:3px;flex:1}
+.punch-time-line{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.p-chip{display:inline-flex;align-items:center;gap:4px;padding:2px 7px;border-radius:4px;font-family:var(--mono);font-size:11px}
+.p-in{background:rgba(45,227,153,.1);color:var(--green);border:1px solid rgba(45,227,153,.2)}
+.p-out{background:rgba(255,92,92,.1);color:var(--red);border:1px solid rgba(255,92,92,.2)}
+.p-dur{background:var(--blue-bg);color:var(--blue);border:1px solid rgba(79,156,249,.2)}
+.p-live{background:var(--amber-bg);color:var(--amber);border:1px solid rgba(249,201,79,.2);animation:blink 1.5s infinite}
+.punch-loc{font-size:10px;color:var(--muted);margin-top:2px;line-height:1.5}
+.loc-in-txt{color:rgba(45,227,153,.7)}
+.loc-out-txt{color:rgba(255,92,92,.7)}
+.loc-loading{color:var(--muted);font-style:italic}
+.punch-del{background:none;border:1px solid var(--border);border-radius:5px;color:var(--muted);font-size:11px;cursor:pointer;padding:3px 7px;transition:all .15s;flex-shrink:0;align-self:flex-start;margin-top:2px}
+.punch-del:hover{color:var(--red);border-color:var(--red-dim);background:var(--red-bg)}
+
+/* ── Summary footer ── */
+.summary-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.summary-stats{display:flex;gap:24px;flex-wrap:wrap}
+.stat-item{display:flex;flex-direction:column;gap:2px}
+.stat-label{font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.stat-value{font-family:var(--mono);font-size:20px;font-weight:500;color:var(--text)}
+.export-btn{background:var(--blue-bg);color:var(--blue);border:1px solid rgba(79,156,249,.3);border-radius:var(--rs);font-family:var(--sans);font-size:12px;font-weight:600;padding:8px 16px;cursor:pointer;transition:all .15s;letter-spacing:.04em;text-transform:uppercase}
+.export-btn:hover{background:rgba(79,156,249,.18)}
+
+/* ── Permission modal ── */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:50;display:flex;align-items:center;justify-content:center;padding:20px;opacity:0;pointer-events:none;transition:opacity .2s}
+.overlay.open{opacity:1;pointer-events:all}
+.modal{background:#fff;border:1px solid var(--border);border-radius:20px;padding:28px 24px;max-width:360px;width:100%;text-align:center;transform:translateY(14px);transition:transform .2s}
+.overlay.open .modal{transform:translateY(0)}
+.modal-icon{font-size:42px;margin-bottom:14px;line-height:1}
+.modal h2{font-size:17px;font-weight:700;color:var(--text);margin-bottom:8px}
+.modal p{font-size:13px;color:var(--muted);line-height:1.65;margin-bottom:18px}
+.modal-why{background:var(--surface2);border:1px solid var(--border);border-radius:var(--rs);padding:12px 14px;margin-bottom:20px;text-align:left}
 .modal-why-row{display:flex;align-items:flex-start;gap:10px;font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:8px}
 .modal-why-row:last-child{margin-bottom:0}
-.modal-why-row span:first-child{flex-shrink:0;font-size:16px}
-.modal-allow{width:100%;padding:14px;border-radius:12px;border:none;background:var(--green);color:#0a1a12;font-family:var(--sans);font-size:15px;font-weight:700;cursor:pointer;transition:all .15s;margin-bottom:10px}
+.modal-why-row span:first-child{flex-shrink:0}
+.modal-allow{width:100%;padding:13px;border-radius:var(--rs);border:none;background:var(--green);color:#fff;font-family:var(--sans);font-size:15px;font-weight:700;cursor:pointer;margin-bottom:8px;transition:background .15s}
 .modal-allow:hover{background:#1fcc85}
-.modal-allow:active{transform:scale(.98)}
-.modal-skip{width:100%;padding:10px;border-radius:12px;border:1px solid var(--border);background:none;color:var(--muted);font-family:var(--sans);font-size:13px;cursor:pointer;transition:all .15s}
-.modal-skip:hover{color:var(--text);border-color:var(--muted)}
+.modal-skip{width:100%;padding:9px;border-radius:var(--rs);border:1px solid var(--border);background:none;color:var(--muted);font-family:var(--sans);font-size:13px;cursor:pointer}
+.modal-skip:hover{color:var(--text)}
 
-/* ── Blocked banner (shown if they denied) ── */
-.blocked-banner{background:rgba(255,92,92,.07);border:1px solid rgba(255,92,92,.25);border-radius:var(--rs);padding:12px 14px;margin-bottom:16px;display:none}
-.blocked-banner h4{font-size:12px;font-weight:600;color:var(--red);margin-bottom:4px}
-.blocked-banner p{font-size:11px;color:var(--muted);line-height:1.6}
+/* Blocked banner */
+.blocked-banner{background:rgba(255,92,92,.07);border:1px solid rgba(255,92,92,.25);border-radius:var(--rs);padding:10px 14px;margin-bottom:14px;display:none}
+.blocked-banner strong{font-size:12px;color:var(--red);display:block;margin-bottom:3px}
+.blocked-banner span{font-size:11px;color:var(--muted);line-height:1.55}
 
-@media(max-width:400px){.name-row{flex-direction:column}}
+/* Toast */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:#1a1d2e;border:1px solid var(--border);border-radius:10px;padding:10px 20px;font-size:13px;color:#eef0f6;font-family:var(--mono);opacity:0;transition:all .3s;pointer-events:none;white-space:nowrap;z-index:100}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* Flatpickr dark theme overrides */
+.flatpickr-calendar{background:#fff!important;border:1px solid var(--border)!important;box-shadow:0 4px 16px rgba(0,0,0,.12)!important;border-radius:var(--r)!important}
+.flatpickr-month,.flatpickr-weekdays,.flatpickr-day,.flatpickr-prev-month,.flatpickr-next-month{color:var(--text)!important;fill:var(--text)!important}
+.flatpickr-weekday{color:var(--muted)!important}
+.flatpickr-day:hover{background:var(--surface2)!important;border-color:var(--border)!important}
+.flatpickr-day.selected{background:var(--blue)!important;border-color:var(--blue)!important;color:#fff!important}
+.flatpickr-day.pay-start{background:rgba(249,201,79,.15)!important;border-color:rgba(249,201,79,.4)!important;color:var(--amber)!important;font-weight:700!important}
+.flatpickr-day.pay-start.selected{background:var(--blue)!important;border-color:var(--blue)!important;color:#fff!important}
+.flatpickr-day.disabled{color:var(--muted)!important;opacity:.3}
+.flatpickr-current-month,.flatpickr-monthDropdown-months{color:var(--text)!important;background:var(--surface)!important}
+.flatpickr-monthDropdown-months option{background:var(--surface)!important}
+span.arrowUp,span.arrowDown{border-color:var(--text)!important}
+.numInputWrapper:hover{background:var(--surface2)!important}
+.numInput{color:var(--text)!important;background:transparent!important}
+
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.4}}
+@media(max-width:500px){.day-name{min-width:75px}.punch-time-line{flex-direction:column;gap:3px}}
 </style>
 </head>
 <body>
@@ -104,286 +152,452 @@ header h1{font-size:15px;font-weight:600;letter-spacing:.04em;text-transform:upp
   <div class="modal">
     <div class="modal-icon">📍</div>
     <h2>Location Access Needed</h2>
-    <p>This timesheet records where you check in and out. Your browser will ask for permission — please tap <strong>Allow</strong>.</p>
+    <p>This timesheet records where you clock in and out. Your browser will ask — please tap <strong>Allow</strong>.</p>
     <div class="modal-why">
-      <div class="modal-why-row"><span>🏢</span><span>Records the exact street address when you arrive at a client site</span></div>
-      <div class="modal-why-row"><span>🔒</span><span>Only used at check-in and check-out — never tracked in between</span></div>
-      <div class="modal-why-row"><span>📋</span><span>Saved to your timesheet log for accurate reporting</span></div>
+      <div class="modal-why-row"><span>🏢</span><span>Records exact street address at each punch</span></div>
+      <div class="modal-why-row"><span>🔒</span><span>Only captured at clock-in and clock-out — never in between</span></div>
+      <div class="modal-why-row"><span>📋</span><span>Saved to your timesheet for accurate reporting</span></div>
     </div>
-    <button class="modal-allow" id="modalAllowBtn">Allow Location Access</button>
-    <button class="modal-skip" id="modalSkipBtn">Skip for now</button>
+    <button class="modal-allow" id="permAllow">Allow Location Access</button>
+    <button class="modal-skip" id="permSkip">Skip for now</button>
   </div>
 </div>
 
 <header>
   <div class="hlogo">
-    <div class="dot" id="headerDot"></div>
+    <div class="dot"></div>
     <h1>Sales Timesheet</h1>
   </div>
-  <div id="liveClock">--:-- --</div>
+  <div id="liveClock"></div>
 </header>
 
 <div class="main">
 
   <div class="blocked-banner" id="blockedBanner">
-    <h4>⚠️ Location is blocked</h4>
-    <p>Click the 🔒 lock icon in your address bar → Site settings → Location → Allow, then refresh the page.</p>
+    <strong>⚠️ Location is blocked</strong>
+    <span>Click the 🔒 lock icon in your address bar → Site settings → Location → Allow, then refresh.</span>
   </div>
 
-  <div class="card">
-    <div class="clabel">Employee</div>
-    <div class="name-row">
-      <div class="fg"><label>First Name</label><input type="text" id="firstName" placeholder="e.g. Jordan" autocomplete="given-name"></div>
-      <div class="fg"><label>Last Name</label><input type="text" id="lastName" placeholder="e.g. Smith" autocomplete="family-name"></div>
+  <!-- Setup -->
+  <div id="setupScreen">
+    <div class="card">
+      <div class="clabel">Pay Period Setup</div>
+      <div class="setup-grid">
+        <div class="fg">
+          <label>First Name</label>
+          <input type="text" id="firstName" placeholder="e.g. Jordan" autocomplete="given-name">
+        </div>
+        <div class="fg">
+          <label>Last Name</label>
+          <input type="text" id="lastName" placeholder="e.g. Smith" autocomplete="family-name">
+        </div>
+        <div class="fg">
+          <label>Pay Period Start</label>
+          <input type="text" id="periodStart" placeholder="Select a date…" readonly style="cursor:pointer">
+        </div>
+        <button class="load-btn" onclick="T.load()">Load Timesheet →</button>
+      </div>
     </div>
   </div>
 
-  <div class="card">
-    <div class="clabel">Actions</div>
-    <div class="status-bar" id="statusBar"><div class="pulse"></div><span id="statusText">Ready — enter your name to begin</span></div>
-    <div class="btn-row">
-      <button class="btn btn-in" id="btnIn" disabled onclick="handleCheckIn()"><span class="btn-icon">↓</span>CHECK IN</button>
-      <button class="btn btn-out" id="btnOut" disabled onclick="checkOut()"><span class="btn-icon">↑</span>CHECK OUT</button>
+  <!-- Sheet -->
+  <div id="sheetScreen" style="display:none">
+    <div class="period-banner">
+      <div>
+        <div class="period-name" id="bannerName"></div>
+        <div class="period-dates" id="bannerDates"></div>
+      </div>
+      <button class="back-btn" onclick="T.goBack()">← Change Period</button>
     </div>
-    <div class="session-timer" id="sessionTimer" style="display:none">Session in progress<span id="timerDisplay">00:00:00</span></div>
+
+    <div id="sheetBody"></div>
+
+    <div class="summary-card" id="summaryCard">
+      <div class="summary-stats">
+        <div class="stat-item">
+          <div class="stat-label">Total Hours</div>
+          <div class="stat-value" id="totalHours">0h 00m</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-label">Days Worked</div>
+          <div class="stat-value" id="daysWorked">0</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-label">Total Punches</div>
+          <div class="stat-value" id="totalPunches">0</div>
+        </div>
+      </div>
+      <button class="export-btn" onclick="T.exportCSV()">⬇ Export CSV</button>
+    </div>
   </div>
 
-  <div class="card">
-    <div class="log-header">
-      <div class="clabel" style="margin-bottom:0">Time Log</div>
-      <button class="export-btn" onclick="exportCSV()">Export CSV</button>
-    </div>
-    <div id="logList"><div class="log-empty">No entries yet</div></div>
-    <div class="total-bar" id="totalBar" style="display:none">
-      <span class="total-label">Total Hours Today</span>
-      <span class="total-val" id="totalHours">0h 00m</span>
-    </div>
-  </div>
 </div>
 <div class="toast" id="toast"></div>
 
 <script>
-const log=[];
-let sessionStart=null,sessionLoc=null,timerIv=null,isIn=false;
-let locationPermission='unknown'; // 'unknown' | 'granted' | 'denied'
-let pendingCheckIn=false;
-
-// Clock
-setInterval(()=>{
-  document.getElementById('liveClock').textContent=
-    new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
-},1000);
-
-// Check permission state on load
-if(navigator.permissions){
-  navigator.permissions.query({name:'geolocation'}).then(r=>{
-    locationPermission=r.state; // 'granted','denied','prompt'
-    r.onchange=()=>{ locationPermission=r.state; };
-  });
+// ── Pay period anchor (every 14 days from this date) ──────────────────────────
+const ANCHOR = new Date("2026-04-06T12:00:00");
+function isPayStart(d){ const diff=Math.round((d-ANCHOR)/(864e5)); return diff>=0&&diff%14===0; }
+function getCurrentPayStart(){
+  const t=new Date(); t.setHours(12,0,0,0);
+  const n=Math.floor(Math.floor((t-ANCHOR)/864e5)/14);
+  const s=new Date(ANCHOR); s.setDate(ANCHOR.getDate()+n*14); return s;
 }
 
-// Name inputs
-['firstName','lastName'].forEach(id=>
-  document.getElementById(id).addEventListener('input',()=>{
-    if(isIn)return;
-    const ok=!!getName();
-    document.getElementById('btnIn').disabled=!ok;
-    document.getElementById('btnOut').disabled=true;
-    setStatus('',ok?'Ready to check in':'Ready — enter your name to begin');
-  })
-);
+// ── App ────────────────────────────────────────────────────────────────────────
+const T = {
+  name:'', periodStart:'', days:[], data:{},
+  _permState:'unknown', _pendingDate:null, _liveIv:null,
 
-function getName(){
-  const f=document.getElementById('firstName').value.trim();
-  const l=document.getElementById('lastName').value.trim();
-  return f&&l?`${f} ${l}`:null;
-}
+  init(){
+    // Clock
+    setInterval(()=>{
+      document.getElementById('liveClock').textContent =
+        new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    },1000);
 
-function setStatus(cls,msg){
-  const b=document.getElementById('statusBar');
-  b.className='status-bar'+(cls?' '+cls:'');
-  document.getElementById('statusText').textContent=msg;
-}
-
-// ── Modal logic ───────────────────────────────────────────────────────────────
-function showModal(){
-  document.getElementById('permOverlay').classList.add('show');
-}
-function hideModal(){
-  document.getElementById('permOverlay').classList.remove('show');
-}
-
-document.getElementById('modalAllowBtn').addEventListener('click',()=>{
-  hideModal();
-  // Trigger browser permission prompt then proceed with check-in
-  proceedCheckIn();
-});
-
-document.getElementById('modalSkipBtn').addEventListener('click',()=>{
-  hideModal();
-  // Check in without waiting for location — will attempt GPS anyway
-  proceedCheckIn();
-});
-
-// ── Entry point when Check In is tapped ───────────────────────────────────────
-function handleCheckIn(){
-  if(!getName()||isIn)return;
-  // If already granted, skip the modal
-  if(locationPermission==='granted'){
-    proceedCheckIn();
-  } else if(locationPermission==='denied'){
-    document.getElementById('blockedBanner').style.display='block';
-    showToast('Location blocked — see instructions above');
-  } else {
-    // Show our friendly explanation first, then they tap Allow to trigger browser prompt
-    showModal();
-  }
-}
-
-// ── GPS + Nominatim ───────────────────────────────────────────────────────────
-async function getLocation(){
-  try{
-    const pos=await new Promise((res,rej)=>
-      navigator.geolocation.getCurrentPosition(res,rej,{enableHighAccuracy:true,timeout:12000,maximumAge:0})
-    );
-    locationPermission='granted';
-    document.getElementById('blockedBanner').style.display='none';
-    return await reverseGeocode(pos.coords.latitude,pos.coords.longitude);
-  }catch(e){
-    if(e.code===1){
-      locationPermission='denied';
-      document.getElementById('blockedBanner').style.display='block';
-      return 'Location permission denied';
+    // Permission state
+    if(navigator.permissions){
+      navigator.permissions.query({name:'geolocation'}).then(r=>{
+        this._permState=r.state;
+        r.onchange=()=>this._permState=r.state;
+      });
     }
-    if(e.code===2) return 'GPS signal unavailable';
-    return 'Location timed out';
+
+    // Modal buttons
+    document.getElementById('permAllow').onclick=()=>{
+      document.getElementById('permOverlay').classList.remove('open');
+      if(this._pendingDate){ this.doPunch(this._pendingDate); this._pendingDate=null; }
+    };
+    document.getElementById('permSkip').onclick=()=>{
+      document.getElementById('permOverlay').classList.remove('open');
+      if(this._pendingDate){ this.doPunch(this._pendingDate); this._pendingDate=null; }
+    };
+
+    // Flatpickr
+    const cur = getCurrentPayStart();
+    flatpickr('#periodStart',{
+      dateFormat:'Y-m-d',
+      defaultDate: cur,
+      disableMobile: true,
+      enable:[ d => isPayStart(d) && d <= cur ],
+      onDayCreate(_,__,___,el){
+        if(isPayStart(el.dateObj)){
+          const s=el.dateObj.toISOString().split('T')[0];
+          el.classList.add('pay-start'); if(s===cur.toISOString().split('T')[0]) el.classList.add('selected');
+        }
+      }
+    });
+  },
+
+  load(){
+    const f=document.getElementById('firstName').value.trim();
+    const l=document.getElementById('lastName').value.trim();
+    const s=document.getElementById('periodStart').value;
+    if(!f||!l){ this.toast('Please enter your first and last name'); return; }
+    if(!s){ this.toast('Please select a pay period'); return; }
+    this.name=`${f} ${l}`; this.periodStart=s;
+    this.days=[];
+    const base=new Date(s+'T12:00:00');
+    for(let i=0;i<14;i++){const d=new Date(base);d.setDate(base.getDate()+i);this.days.push(d.toISOString().split('T')[0]);}
+    this.loadData();
+    document.getElementById('setupScreen').style.display='none';
+    document.getElementById('sheetScreen').style.display='block';
+    document.getElementById('bannerName').textContent=this.name;
+    document.getElementById('bannerDates').textContent=`${this.fmtDate(this.days[0])} → ${this.fmtDate(this.days[13])}`;
+    this.render();
+  },
+
+  goBack(){
+    document.getElementById('setupScreen').style.display='block';
+    document.getElementById('sheetScreen').style.display='none';
+    clearInterval(this._liveIv);
+  },
+
+  key(){ return `ts|${this.periodStart}|${this.name}`; },
+  loadData(){
+    try{ const s=localStorage.getItem(this.key()); if(s) this.data=JSON.parse(s)||{}; else this.data={}; }catch(e){ this.data={}; }
+  },
+  save(){
+    try{ localStorage.setItem(this.key(),JSON.stringify(this.data)); }catch(e){}
+  },
+
+  dayData(d){ return this.data[d]||(this.data[d]={punches:[],active:null,activeLoc:''}); },
+
+  // ── Clock button tap ──────────────────────────────────────────────────────
+  handlePunch(date){
+    if(this._permState==='granted'){
+      this.doPunch(date);
+    } else if(this._permState==='denied'){
+      document.getElementById('blockedBanner').style.display='block';
+      this.toast('Location blocked — see instructions above');
+    } else {
+      this._pendingDate=date;
+      document.getElementById('permOverlay').classList.add('open');
+    }
+  },
+
+  doPunch(date){
+    const e=this.dayData(date);
+    const now=this.nowHMS();
+    if(!e.active){
+      // Clock In
+      e.active=now;
+      e.activeLoc='📍 Getting location…';
+      this.save(); this.render();
+      this.toast(`Clocked in at ${this.toAmPm(now)}`);
+      this.getLocation().then(loc=>{
+        const e2=this.data[date];
+        if(e2&&e2.active===now){
+          e2.activeLoc=loc?'📍 '+loc:'';
+          this.save(); this.render();
+        } else if(e2){
+          const p=(e2.punches||[]).find(x=>x.in===now);
+          if(p&&p.locIn&&p.locIn.includes('Getting')) p.locIn=loc?'📍 '+loc:'';
+          this.save(); this.render();
+        }
+      });
+    } else {
+      // Clock Out
+      const inTime=e.active;
+      const inLoc=e.activeLoc||'';
+      if(!e.punches) e.punches=[];
+      e.punches.push({in:inTime,out:now,locIn:inLoc,locOut:'📍 Getting location…'});
+      const idx=e.punches.length-1;
+      e.active=null; e.activeLoc='';
+      this.save(); this.render();
+      this.toast(`Clocked out at ${this.toAmPm(now)}`);
+      this.getLocation().then(loc=>{
+        const e2=this.data[date];
+        if(e2&&e2.punches&&e2.punches[idx]){
+          e2.punches[idx].locOut=loc?'📍 '+loc:'';
+          this.save(); this.render();
+        }
+      });
+    }
+  },
+
+  delPunch(date,idx){
+    if(!confirm('Remove this punch record?')) return;
+    const e=this.data[date];
+    if(e&&e.punches) e.punches.splice(idx,1);
+    this.save(); this.render();
+  },
+
+  // ── Render ────────────────────────────────────────────────────────────────
+  render(){
+    const body=document.getElementById('sheetBody');
+    const today=new Date().toISOString().split('T')[0];
+    let html='';
+    [0,7].forEach(offset=>{
+      html+=`<div class="week-label">Week ${offset===0?1:2}</div>`;
+      for(let i=offset;i<offset+7;i++){
+        const date=this.days[i];
+        const dow=new Date(date+'T12:00:00').getDay();
+        const isWknd=dow===0||dow===6;
+        const isTdy=date===today;
+        const isFtr=date>today;
+        const e=this.data[date]||{punches:[],active:null};
+        const punches=e.punches||[];
+        const cls=`day-card${isTdy?' today':isWknd?' weekend':isFtr?' future':''}`;
+        const dayNames=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+        const fullDays=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+        const dayTotalH=punches.reduce((s,p)=>s+this.punchH(p.in,p.out),0);
+        const punchBtn=e.active
+          ?`<button class="clock-out-btn" onclick="T.handlePunch('${date}')">🔴 Clock Out</button>`
+          :`<button class="clock-in-btn" onclick="T.handlePunch('${date}')">🟢 Clock In</button>`;
+
+        html+=`<div class="${cls}">
+          <div class="day-head">
+            <div class="day-name">${fullDays[dow]}</div>
+            <div class="day-date">${this.fmtDate(date)}</div>
+            ${isTdy?'<span class="today-badge">Today</span>':''}
+            ${dayTotalH>0?`<span class="day-total">${this.fmtDur(dayTotalH*3600000)}</span>`:''}
+            ${!isWknd&&!isFtr?punchBtn:''}
+          </div>`;
+
+        // Active punch
+        if(e.active){
+          html+=`<div class="punches"><div class="punch-row">
+            <div class="punch-times">
+              <div class="punch-time-line">
+                <span class="p-chip p-in">▼ IN ${this.toAmPm(e.active)}</span>
+                <span class="p-chip p-live" id="live-${date}">⏱ 00:00</span>
+              </div>
+              <div class="punch-loc loc-loading">${e.activeLoc||''}</div>
+            </div>
+          </div></div>`;
+        }
+
+        // Completed punches
+        if(punches.length){
+          html+=`<div class="punches">`;
+          punches.forEach((p,idx)=>{
+            const dur=this.punchH(p.in,p.out);
+            const locIn=p.locIn||'';
+            const locOut=p.locOut||'';
+            const locHtml=(locIn||locOut)?`<div class="punch-loc">
+              ${locIn?`<span class="${locIn.includes('Getting')?'loc-loading':'loc-in-txt'}">${locIn}</span>`:''}
+              ${locOut?`<br><span class="${locOut.includes('Getting')?'loc-loading':'loc-out-txt'}">${locOut}</span>`:''}
+            </div>`:'';
+            html+=`<div class="punch-row">
+              <div class="punch-times">
+                <div class="punch-time-line">
+                  <span class="p-chip p-in">▼ IN ${this.toAmPm(p.in)}</span>
+                  <span class="p-chip p-out">▲ OUT ${this.toAmPm(p.out)}</span>
+                  <span class="p-chip p-dur">⏱ ${this.fmtDur(dur*3600000)}</span>
+                </div>
+                ${locHtml}
+              </div>
+              <button class="punch-del" onclick="T.delPunch('${date}',${idx})">✕</button>
+            </div>`;
+          });
+          html+=`</div>`;
+        }
+
+        html+=`</div>`;
+      }
+    });
+    body.innerHTML=html;
+    this.updateSummary();
+    this.startLiveTimers();
+  },
+
+  startLiveTimers(){
+    clearInterval(this._liveIv);
+    const today=new Date().toISOString().split('T')[0];
+    const e=this.data[today];
+    if(!e||!e.active) return;
+    const inTime=e.active;
+    const el=document.getElementById('live-'+today);
+    if(!el) return;
+    this._liveIv=setInterval(()=>{
+      const now=new Date();
+      const [h,m,s]=inTime.split(':').map(Number);
+      const start=new Date(); start.setHours(h,m,s,0);
+      const ms=now-start;
+      if(ms<0){clearInterval(this._liveIv);return;}
+      const tot=Math.floor(ms/1000);
+      const hh=Math.floor(tot/3600),mm=Math.floor((tot%3600)/60),ss=tot%60;
+      const liveEl=document.getElementById('live-'+today);
+      if(liveEl) liveEl.textContent=`⏱ ${hh>0?hh+'h ':''  }${String(mm).padStart(2,'0')}:${String(ss).padStart(2,'0')}`;
+    },1000);
+  },
+
+  updateSummary(){
+    let totalMs=0, daysWorked=0, totalPunches=0;
+    this.days.forEach(d=>{
+      const e=this.data[d]||{};
+      const punches=e.punches||[];
+      if(punches.length){ daysWorked++; totalPunches+=punches.length; }
+      totalMs+=punches.reduce((s,p)=>s+this.punchH(p.in,p.out)*3600000,0);
+    });
+    document.getElementById('totalHours').textContent=this.fmtDur(totalMs);
+    document.getElementById('daysWorked').textContent=daysWorked;
+    document.getElementById('totalPunches').textContent=totalPunches;
+  },
+
+  // ── Location ──────────────────────────────────────────────────────────────
+  async getLocation(){
+    const nominatim=async(lat,lon)=>{
+      try{
+        const ctrl=new AbortController();
+        const tid=setTimeout(()=>ctrl.abort(),8000);
+        const r=await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&zoom=18`,
+          {signal:ctrl.signal,headers:{'Accept-Language':'en','User-Agent':'SalesTimesheet/1.0'}});
+        clearTimeout(tid);
+        const j=await r.json(); const a=j.address||{};
+        const num=a.house_number||'', road=a.road||a.pedestrian||a.footway||'';
+        const city=a.city||a.town||a.village||a.suburb||'';
+        const prov=a.state||a.province||'';
+        let addr=num&&road?`${num} ${road}`:road||(j.display_name||'').split(',')[0]||'';
+        if(city) addr+=`${addr?', ':''}${city}`;
+        if(prov) addr+=`, ${prov}`;
+        return addr.trim();
+      }catch(_){ return ''; }
+    };
+    // GPS
+    if(navigator.geolocation){
+      try{
+        const pos=await new Promise((res,rej)=>
+          navigator.geolocation.getCurrentPosition(res,rej,{enableHighAccuracy:true,timeout:10000,maximumAge:0})
+        );
+        this._permState='granted';
+        document.getElementById('blockedBanner').style.display='none';
+        const addr=await nominatim(pos.coords.latitude,pos.coords.longitude);
+        return addr||`${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)}`;
+      }catch(e){
+        if(e.code===1){ this._permState='denied'; document.getElementById('blockedBanner').style.display='block'; }
+      }
+    }
+    // IP fallback
+    try{
+      const d=await (await fetch('https://ipwho.is/')).json();
+      if(d&&d.success&&d.latitude){
+        const addr=await nominatim(d.latitude,d.longitude);
+        return addr||[d.city,d.region,d.country].filter(Boolean).join(', ');
+      }
+    }catch(_){}
+    try{
+      const d=await (await fetch('https://ipapi.co/json/')).json();
+      if(d&&d.city) return [d.city,d.region,d.country_name].filter(Boolean).join(', ');
+    }catch(_){}
+    return '';
+  },
+
+  // ── CSV Export ────────────────────────────────────────────────────────────
+  exportCSV(){
+    const rows=[['Name','Date','Day','Clock In','Clock Out','Duration','Check In Address','Check Out Address']];
+    this.days.forEach(d=>{
+      const e=this.data[d]||{};
+      const dow=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][new Date(d+'T12:00:00').getDay()];
+      (e.punches||[]).forEach(p=>{
+        rows.push([`"${this.name}"`,d,dow,this.toAmPm(p.in),this.toAmPm(p.out),
+          this.fmtDur(this.punchH(p.in,p.out)*3600000),
+          `"${(p.locIn||'').replace(/^📍\s*/,'')}"`,
+          `"${(p.locOut||'').replace(/^📍\s*/,'')}"`]);
+      });
+    });
+    if(rows.length===1){ this.toast('No entries to export'); return; }
+    const a=Object.assign(document.createElement('a'),{
+      href:URL.createObjectURL(new Blob([rows.map(r=>r.join(',')).join('\n')],{type:'text/csv'})),
+      download:`timesheet_${this.name.replace(/\s+/g,'_')}_${this.periodStart}.csv`
+    });
+    a.click(); URL.revokeObjectURL(a.href);
+    this.toast('CSV exported!');
+  },
+
+  // ── Helpers ───────────────────────────────────────────────────────────────
+  nowHMS(){
+    const n=new Date();
+    return`${String(n.getHours()).padStart(2,'0')}:${String(n.getMinutes()).padStart(2,'0')}:${String(n.getSeconds()).padStart(2,'0')}`;
+  },
+  punchH(a,b){
+    if(!a||!b)return 0;
+    const[h1,m1,s1]=(a+':00').split(':').map(Number);
+    const[h2,m2,s2]=(b+':00').split(':').map(Number);
+    return Math.max(0,((h2*3600+m2*60+s2)-(h1*3600+m1*60+s1))/3600);
+  },
+  toAmPm(t){
+    if(!t)return'';
+    const[h,m]=t.split(':').map(Number);
+    return`${h%12||12}:${String(m).padStart(2,'0')} ${h>=12?'PM':'AM'}`;
+  },
+  fmtDate(ds){
+    return new Date(ds+'T12:00:00').toLocaleDateString('en-CA',{month:'short',day:'numeric',weekday:'short'});
+  },
+  fmtDur(ms){
+    const h=Math.floor(ms/3600000),m=Math.floor((ms%3600000)/60000);
+    return h>0?`${h}h ${String(m).padStart(2,'0')}m`:`${m}m`;
+  },
+  toast(msg){
+    const t=document.getElementById('toast');
+    t.textContent=msg; t.classList.add('show');
+    clearTimeout(this._tt); this._tt=setTimeout(()=>t.classList.remove('show'),2800);
   }
-}
+};
 
-async function reverseGeocode(lat,lon){
-  try{
-    const ctrl=new AbortController();
-    const tid=setTimeout(()=>ctrl.abort(),8000);
-    const r=await fetch(
-      `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&addressdetails=1`,
-      {signal:ctrl.signal,headers:{'Accept-Language':'en','User-Agent':'SalesTimesheet/1.0'}}
-    );
-    clearTimeout(tid);
-    const d=await r.json();
-    const a=d.address||{};
-    const num=a.house_number||'';
-    const road=a.road||a.pedestrian||a.street||a.footway||'';
-    const city=a.city||a.town||a.village||a.suburb||'';
-    const prov=a.state||a.province||'';
-    let addr=num&&road?`${num} ${road}`:road||(d.display_name||'').split(',')[0]||'';
-    if(city) addr+=`${addr?', ':''}${city}`;
-    if(prov) addr+=`, ${prov}`;
-    return addr.trim()||`${lat.toFixed(5)}, ${lon.toFixed(5)}`;
-  }catch(_){
-    return `${lat.toFixed(5)}, ${lon.toFixed(5)}`;
-  }
-}
-
-// ── Actual check-in after modal resolved ─────────────────────────────────────
-async function proceedCheckIn(){
-  if(!getName()||isIn)return;
-  lockFields(true);
-  document.getElementById('btnIn').disabled=true;
-  document.getElementById('btnOut').disabled=true;
-  setStatus('locating','📍 Getting your location...');
-
-  const addr=await getLocation();
-  const now=new Date();
-  sessionStart=now; sessionLoc=addr; isIn=true;
-
-  document.getElementById('headerDot').classList.add('red');
-  document.getElementById('btnOut').disabled=false;
-  setStatus('active',`✓ Checked in — ${fmtTime(now)}`);
-  document.getElementById('sessionTimer').style.display='block';
-  timerIv=setInterval(()=>{
-    document.getElementById('timerDisplay').textContent=fmtElapsed(Date.now()-sessionStart.getTime());
-  },1000);
-  showToast(`Checked in at ${fmtTime(now)}`);
-}
-
-// ── Check Out ────────────────────────────────────────────────────────────────
-async function checkOut(){
-  if(!isIn)return;
-  document.getElementById('btnOut').disabled=true;
-  setStatus('locating','📍 Getting checkout location...');
-
-  const addr=await getLocation();
-  const now=new Date();
-  const dur=now-sessionStart;
-  log.unshift({id:Date.now(),name:getName(),inTime:sessionStart,outTime:now,duration:dur,inAddr:sessionLoc,outAddr:addr});
-
-  clearInterval(timerIv);
-  sessionStart=null; sessionLoc=null; isIn=false;
-  document.getElementById('timerDisplay').textContent='00:00:00';
-  document.getElementById('sessionTimer').style.display='none';
-  document.getElementById('headerDot').classList.remove('red');
-  lockFields(false);
-  document.getElementById('btnIn').disabled=false;
-  document.getElementById('btnOut').disabled=true;
-  setStatus('active',`Checked out at ${fmtTime(now)}`);
-  renderLog();
-  showToast(`Checked out — ${fmtDur(dur)}`);
-}
-
-function lockFields(on){
-  document.getElementById('firstName').disabled=on;
-  document.getElementById('lastName').disabled=on;
-}
-
-// ── Render log ────────────────────────────────────────────────────────────────
-function renderLog(){
-  const el=document.getElementById('logList');
-  const tb=document.getElementById('totalBar');
-  if(!log.length){el.innerHTML='<div class="log-empty">No entries yet</div>';tb.style.display='none';return;}
-  tb.style.display='flex';
-  const ms=log.reduce((s,e)=>s+(e.duration||0),0);
-  document.getElementById('totalHours').textContent=
-    `${Math.floor(ms/3600000)}h ${String(Math.floor((ms%3600000)/60000)).padStart(2,'0')}m`;
-  el.innerHTML=log.map(e=>`
-    <div class="log-entry">
-      <button class="del-btn" onclick="delEntry(${e.id})">✕</button>
-      <div class="entry-name">${e.name}</div>
-      <div class="entry-times">
-        <span class="chip chip-in">▼ IN ${fmtTime(e.inTime)}</span>
-        ${e.outTime
-          ?`<span class="chip chip-out">▲ OUT ${fmtTime(e.outTime)}</span><span class="chip chip-dur">⏱ ${fmtDur(e.duration)}</span>`
-          :`<span class="chip chip-wait">⏳ In progress</span>`}
-      </div>
-      <div class="entry-loc"><span>📍</span><div>
-        <span style="color:var(--blue)">In:</span> ${e.inAddr}
-        ${e.outTime?`<br><span style="color:var(--red)">Out:</span> ${e.outAddr}`:''}
-      </div></div>
-    </div>`).join('');
-}
-
-function delEntry(id){const i=log.findIndex(e=>e.id===id);if(i!==-1){log.splice(i,1);renderLog();}}
-
-// ── CSV ───────────────────────────────────────────────────────────────────────
-function exportCSV(){
-  if(!log.length){showToast('No entries to export');return;}
-  const rows=[['Name','Date','Check In','Check Out','Duration','Check In Address','Check Out Address'],
-    ...log.map(e=>[`"${e.name}"`,fmtDate(e.inTime),fmtTime(e.inTime),
-      e.outTime?fmtTime(e.outTime):'In progress',
-      e.outTime?fmtDur(e.duration):'',
-      `"${e.inAddr}"`,`"${e.outTime?e.outAddr:''}"`])];
-  const a=Object.assign(document.createElement('a'),{
-    href:URL.createObjectURL(new Blob([rows.map(r=>r.join(',')).join('\n')],{type:'text/csv'})),
-    download:`timesheet_${fmtDate(new Date())}.csv`});
-  a.click();URL.revokeObjectURL(a.href);
-  showToast('CSV exported!');
-}
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-function fmtTime(d){return d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:true});}
-function fmtDate(d){return d.toLocaleDateString('en-CA');}
-function fmtDur(ms){const h=Math.floor(ms/3600000),m=Math.floor((ms%3600000)/60000);return h>0?`${h}h ${String(m).padStart(2,'0')}m`:`${m}m`;}
-function fmtElapsed(ms){const s=Math.floor(ms/1000);return `${String(Math.floor(s/3600)).padStart(2,'0')}:${String(Math.floor((s%3600)/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;}
-function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2600);}
+window.addEventListener('DOMContentLoaded',()=>T.init());
 </script>
 </body>
 </html>
