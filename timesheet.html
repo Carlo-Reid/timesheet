@@ -23,15 +23,6 @@ header{background:var(--surface);border-bottom:1px solid var(--border);padding:1
 .dot.red{background:var(--red);box-shadow:0 0 8px var(--red)}
 header h1{font-size:15px;font-weight:600;letter-spacing:.04em;text-transform:uppercase}
 #liveClock{font-family:var(--mono);font-size:13px;color:var(--muted);letter-spacing:.05em}
-
-/* HTTPS warning banner */
-.https-warning{background:rgba(249,201,79,.08);border:1px solid rgba(249,201,79,.3);border-radius:var(--rs);padding:14px 16px;margin-bottom:16px;display:none}
-.https-warning h3{font-size:13px;font-weight:600;color:var(--amber);margin-bottom:6px;letter-spacing:.02em}
-.https-warning p{font-size:12px;color:var(--muted);line-height:1.6}
-.https-warning a{color:var(--blue);text-decoration:none}
-.https-warning a:hover{text-decoration:underline}
-.https-warning code{background:var(--surface2);padding:1px 5px;border-radius:3px;font-family:var(--mono);font-size:11px;color:var(--text)}
-
 .main{max-width:540px;margin:0 auto;padding:24px 16px 0}
 .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:20px;margin-bottom:16px}
 .clabel{font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:14px}
@@ -79,10 +70,51 @@ header h1{font-size:15px;font-weight:600;letter-spacing:.04em;text-transform:upp
 .total-val{font-family:var(--mono);font-size:15px;color:var(--blue);font-weight:500}
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 20px;font-size:13px;color:var(--text);font-family:var(--mono);opacity:0;transition:all .3s;pointer-events:none;white-space:nowrap;z-index:100}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* ── Permission modal overlay ── */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:50;display:flex;align-items:center;justify-content:center;padding:20px;opacity:0;pointer-events:none;transition:opacity .25s}
+.overlay.show{opacity:1;pointer-events:all}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:28px 24px;max-width:360px;width:100%;text-align:center;transform:translateY(16px);transition:transform .25s}
+.overlay.show .modal{transform:translateY(0)}
+.modal-icon{font-size:44px;margin-bottom:16px;line-height:1}
+.modal h2{font-size:17px;font-weight:700;color:var(--text);margin-bottom:10px}
+.modal p{font-size:13px;color:var(--muted);line-height:1.7;margin-bottom:22px}
+.modal-why{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:22px;text-align:left}
+.modal-why-row{display:flex;align-items:flex-start;gap:10px;font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:8px}
+.modal-why-row:last-child{margin-bottom:0}
+.modal-why-row span:first-child{flex-shrink:0;font-size:16px}
+.modal-allow{width:100%;padding:14px;border-radius:12px;border:none;background:var(--green);color:#0a1a12;font-family:var(--sans);font-size:15px;font-weight:700;cursor:pointer;transition:all .15s;margin-bottom:10px}
+.modal-allow:hover{background:#1fcc85}
+.modal-allow:active{transform:scale(.98)}
+.modal-skip{width:100%;padding:10px;border-radius:12px;border:1px solid var(--border);background:none;color:var(--muted);font-family:var(--sans);font-size:13px;cursor:pointer;transition:all .15s}
+.modal-skip:hover{color:var(--text);border-color:var(--muted)}
+
+/* ── Blocked banner (shown if they denied) ── */
+.blocked-banner{background:rgba(255,92,92,.07);border:1px solid rgba(255,92,92,.25);border-radius:var(--rs);padding:12px 14px;margin-bottom:16px;display:none}
+.blocked-banner h4{font-size:12px;font-weight:600;color:var(--red);margin-bottom:4px}
+.blocked-banner p{font-size:11px;color:var(--muted);line-height:1.6}
+
 @media(max-width:400px){.name-row{flex-direction:column}}
 </style>
 </head>
 <body>
+
+<!-- Permission modal -->
+<div class="overlay" id="permOverlay">
+  <div class="modal">
+    <div class="modal-icon">📍</div>
+    <h2>Location Access Needed</h2>
+    <p>This timesheet records where you check in and out. Your browser will ask for permission — please tap <strong>Allow</strong>.</p>
+    <div class="modal-why">
+      <div class="modal-why-row"><span>🏢</span><span>Records the exact street address when you arrive at a client site</span></div>
+      <div class="modal-why-row"><span>🔒</span><span>Only used at check-in and check-out — never tracked in between</span></div>
+      <div class="modal-why-row"><span>📋</span><span>Saved to your timesheet log for accurate reporting</span></div>
+    </div>
+    <button class="modal-allow" id="modalAllowBtn">Allow Location Access</button>
+    <button class="modal-skip" id="modalSkipBtn">Skip for now</button>
+  </div>
+</div>
+
 <header>
   <div class="hlogo">
     <div class="dot" id="headerDot"></div>
@@ -93,13 +125,9 @@ header h1{font-size:15px;font-weight:600;letter-spacing:.04em;text-transform:upp
 
 <div class="main">
 
-  <!-- HTTPS warning — shown only when not on https -->
-  <div class="https-warning" id="httpsWarning">
-    <h3>⚠️ Exact location requires HTTPS hosting</h3>
-    <p>
-      This file is being opened directly from your computer. Browsers only allow GPS access on secure <code>https://</code> websites, so exact street addresses won't work here.<br><br>
-      To fix this, drag and drop this file onto <a href="https://app.netlify.com/drop" target="_blank">app.netlify.com/drop</a> — it's free, takes 30 seconds, and gives you a shareable link your whole team can use.
-    </p>
+  <div class="blocked-banner" id="blockedBanner">
+    <h4>⚠️ Location is blocked</h4>
+    <p>Click the 🔒 lock icon in your address bar → Site settings → Location → Allow, then refresh the page.</p>
   </div>
 
   <div class="card">
@@ -114,7 +142,7 @@ header h1{font-size:15px;font-weight:600;letter-spacing:.04em;text-transform:upp
     <div class="clabel">Actions</div>
     <div class="status-bar" id="statusBar"><div class="pulse"></div><span id="statusText">Ready — enter your name to begin</span></div>
     <div class="btn-row">
-      <button class="btn btn-in" id="btnIn" disabled onclick="checkIn()"><span class="btn-icon">↓</span>CHECK IN</button>
+      <button class="btn btn-in" id="btnIn" disabled onclick="handleCheckIn()"><span class="btn-icon">↓</span>CHECK IN</button>
       <button class="btn btn-out" id="btnOut" disabled onclick="checkOut()"><span class="btn-icon">↑</span>CHECK OUT</button>
     </div>
     <div class="session-timer" id="sessionTimer" style="display:none">Session in progress<span id="timerDisplay">00:00:00</span></div>
@@ -137,17 +165,22 @@ header h1{font-size:15px;font-weight:600;letter-spacing:.04em;text-transform:upp
 <script>
 const log=[];
 let sessionStart=null,sessionLoc=null,timerIv=null,isIn=false;
-
-// Show HTTPS warning if not on https or localhost
-if(location.protocol!=='https:' && location.hostname!=='localhost'){
-  document.getElementById('httpsWarning').style.display='block';
-}
+let locationPermission='unknown'; // 'unknown' | 'granted' | 'denied'
+let pendingCheckIn=false;
 
 // Clock
 setInterval(()=>{
   document.getElementById('liveClock').textContent=
     new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
 },1000);
+
+// Check permission state on load
+if(navigator.permissions){
+  navigator.permissions.query({name:'geolocation'}).then(r=>{
+    locationPermission=r.state; // 'granted','denied','prompt'
+    r.onchange=()=>{ locationPermission=r.state; };
+  });
+}
 
 // Name inputs
 ['firstName','lastName'].forEach(id=>
@@ -172,18 +205,56 @@ function setStatus(cls,msg){
   document.getElementById('statusText').textContent=msg;
 }
 
-// ─── GPS + Nominatim ──────────────────────────────────────────────────────────
-async function getLocation(){
-  if(!navigator.geolocation){
-    return 'GPS not supported on this device';
+// ── Modal logic ───────────────────────────────────────────────────────────────
+function showModal(){
+  document.getElementById('permOverlay').classList.add('show');
+}
+function hideModal(){
+  document.getElementById('permOverlay').classList.remove('show');
+}
+
+document.getElementById('modalAllowBtn').addEventListener('click',()=>{
+  hideModal();
+  // Trigger browser permission prompt then proceed with check-in
+  proceedCheckIn();
+});
+
+document.getElementById('modalSkipBtn').addEventListener('click',()=>{
+  hideModal();
+  // Check in without waiting for location — will attempt GPS anyway
+  proceedCheckIn();
+});
+
+// ── Entry point when Check In is tapped ───────────────────────────────────────
+function handleCheckIn(){
+  if(!getName()||isIn)return;
+  // If already granted, skip the modal
+  if(locationPermission==='granted'){
+    proceedCheckIn();
+  } else if(locationPermission==='denied'){
+    document.getElementById('blockedBanner').style.display='block';
+    showToast('Location blocked — see instructions above');
+  } else {
+    // Show our friendly explanation first, then they tap Allow to trigger browser prompt
+    showModal();
   }
+}
+
+// ── GPS + Nominatim ───────────────────────────────────────────────────────────
+async function getLocation(){
   try{
     const pos=await new Promise((res,rej)=>
       navigator.geolocation.getCurrentPosition(res,rej,{enableHighAccuracy:true,timeout:12000,maximumAge:0})
     );
-    return await reverseGeocode(pos.coords.latitude, pos.coords.longitude);
+    locationPermission='granted';
+    document.getElementById('blockedBanner').style.display='none';
+    return await reverseGeocode(pos.coords.latitude,pos.coords.longitude);
   }catch(e){
-    if(e.code===1) return 'Location permission denied — please allow location access';
+    if(e.code===1){
+      locationPermission='denied';
+      document.getElementById('blockedBanner').style.display='block';
+      return 'Location permission denied';
+    }
     if(e.code===2) return 'GPS signal unavailable';
     return 'Location timed out';
   }
@@ -192,12 +263,12 @@ async function getLocation(){
 async function reverseGeocode(lat,lon){
   try{
     const ctrl=new AbortController();
-    const id=setTimeout(()=>ctrl.abort(),8000);
+    const tid=setTimeout(()=>ctrl.abort(),8000);
     const r=await fetch(
       `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&addressdetails=1`,
       {signal:ctrl.signal,headers:{'Accept-Language':'en','User-Agent':'SalesTimesheet/1.0'}}
     );
-    clearTimeout(id);
+    clearTimeout(tid);
     const d=await r.json();
     const a=d.address||{};
     const num=a.house_number||'';
@@ -213,8 +284,8 @@ async function reverseGeocode(lat,lon){
   }
 }
 
-// ─── Check In ────────────────────────────────────────────────────────────────
-async function checkIn(){
+// ── Actual check-in after modal resolved ─────────────────────────────────────
+async function proceedCheckIn(){
   if(!getName()||isIn)return;
   lockFields(true);
   document.getElementById('btnIn').disabled=true;
@@ -235,7 +306,7 @@ async function checkIn(){
   showToast(`Checked in at ${fmtTime(now)}`);
 }
 
-// ─── Check Out ───────────────────────────────────────────────────────────────
+// ── Check Out ────────────────────────────────────────────────────────────────
 async function checkOut(){
   if(!isIn)return;
   document.getElementById('btnOut').disabled=true;
@@ -264,7 +335,7 @@ function lockFields(on){
   document.getElementById('lastName').disabled=on;
 }
 
-// ─── Render log ───────────────────────────────────────────────────────────────
+// ── Render log ────────────────────────────────────────────────────────────────
 function renderLog(){
   const el=document.getElementById('logList');
   const tb=document.getElementById('totalBar');
@@ -292,7 +363,7 @@ function renderLog(){
 
 function delEntry(id){const i=log.findIndex(e=>e.id===id);if(i!==-1){log.splice(i,1);renderLog();}}
 
-// ─── CSV ──────────────────────────────────────────────────────────────────────
+// ── CSV ───────────────────────────────────────────────────────────────────────
 function exportCSV(){
   if(!log.length){showToast('No entries to export');return;}
   const rows=[['Name','Date','Check In','Check Out','Duration','Check In Address','Check Out Address'],
@@ -307,7 +378,7 @@ function exportCSV(){
   showToast('CSV exported!');
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// ── Helpers ───────────────────────────────────────────────────────────────────
 function fmtTime(d){return d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:true});}
 function fmtDate(d){return d.toLocaleDateString('en-CA');}
 function fmtDur(ms){const h=Math.floor(ms/3600000),m=Math.floor((ms%3600000)/60000);return h>0?`${h}h ${String(m).padStart(2,'0')}m`:`${m}m`;}
