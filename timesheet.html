@@ -4,10 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
 <meta name="locked-employee" content="">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="Timesheet">
-<meta name="theme-color" content="#1565c0">
 <title>Sales Timesheet</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -207,7 +203,11 @@ header h1{font-size:13px;font-weight:700;letter-spacing:.05em;text-transform:upp
 
 <script>
 const SCRIPT_URL="YOUR_GOOGLE_APPS_SCRIPT_URL_HERE";
-const LOCKED=document.querySelector('meta[name="locked-employee"]')?.content||'';
+
+// Lock employee via URL param (?emp=Jordan+Smith) or meta tag fallback
+const _urlEmp=new URLSearchParams(location.search).get('emp')||'';
+const _metaEmp=document.querySelector('meta[name="locked-employee"]')?.content||'';
+const LOCKED=_urlEmp||_metaEmp;
 
 const ANCHOR=new Date("2026-04-06T12:00:00");
 function isPS(d){const diff=Math.round((d-ANCHOR)/864e5);return diff>=0&&diff%14===0;}
@@ -243,11 +243,20 @@ const S={
       <div class="sit">
         <span class="sn">${n}</span>
         <div class="sacts">
-          <button class="dlbtn" onclick="S.dl('${n.replace(/'/g,"\\'")}')">⬇ Download</button>
+          <button class="dlbtn" onclick="S.copyLink('${n.replace(/'/g,"\\'")}')">🔗 Copy Link</button>
           <button class="rmbtn" onclick="S.rm(${i})">✕</button>
         </div>
       </div>`).join('');
     T.buildSetup();
+  },
+  copyLink(name){
+    const base=location.href.split('?')[0];
+    const url=`${base}?emp=${encodeURIComponent(name)}`;
+    if(navigator.clipboard){
+      navigator.clipboard.writeText(url).then(()=>toast(`Link copied for ${name} — paste it in a message to them`));
+    } else {
+      prompt(`Copy this link and send it to ${name}:`,url);
+    }
   },
   add(){
     const inp=document.getElementById('newEmp');
@@ -259,19 +268,6 @@ const S={
   rm(i){
     if(!confirm(`Remove "${this.list[i]}"?`))return;
     this.list.splice(i,1);this.save();this.render();
-  },
-  async dl(name){
-    try{
-      const r=await fetch(location.href);
-      let src=await r.text();
-      src=src.replace('<meta name="locked-employee" content="">',`<meta name="locked-employee" content="${name}">`);
-      src=src.replace('id="mgrBtn" onclick="S.open()"','id="mgrBtn" style="display:none" onclick="S.open()"');
-      const a=Object.assign(document.createElement('a'),{
-        href:URL.createObjectURL(new Blob([src],{type:'text/html'})),
-        download:`Timesheet_${name.replace(/\s+/g,'_')}.html`
-      });
-      a.click();toast(`Downloaded file for ${name}`);
-    }catch(e){toast('Open from live GitHub link to download');}
   }
 };
 
@@ -285,11 +281,10 @@ const T={
       document.getElementById('clk').textContent=
         new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
     },1000);
-    if(navigator.permissions){
-      navigator.permissions.query({name:'geolocation'}).then(r=>{
-        this._perm=r.state;r.onchange=()=>this._perm=r.state;
-      });
-    }
+
+    // Do NOT use navigator.permissions.query — hangs on iOS Safari
+    // Permission state is checked only when punch button is tapped
+
     document.getElementById('pAllow').onclick=()=>{
       document.getElementById('permOv').classList.remove('open');
       if(this._pd){this.punch(this._pd);this._pd=null;}
@@ -300,7 +295,7 @@ const T={
     };
     S.load();
     this.buildSetup();
-    if(LOCKED){document.getElementById('mgrBtn').style.display='none';}
+    if(LOCKED) document.getElementById('mgrBtn').style.display='none';
   },
 
   buildSetup(){
@@ -369,9 +364,18 @@ const T={
   day(d){return this.data[d]||(this.data[d]={punches:[],active:null,activeLoc:''});},
 
   tap(date){
-    if(this._perm==='granted'){this.punch(date);}
-    else if(this._perm==='denied'){document.getElementById('blkd').style.display='block';toast('Location blocked — see top of page');}
-    else{this._pd=date;document.getElementById('permOv').classList.add('open');}
+    // Always show the friendly modal first if we haven't gotten permission yet
+    if(this._perm==='granted'){
+      this.punch(date);
+    } else if(this._perm==='denied'){
+      document.getElementById('blkd').style.display='block';
+      toast('Location blocked — see top of page');
+    } else {
+      // Unknown — show modal, then attempt GPS inside punch()
+      // GPS attempt itself will reveal whether it's granted or denied
+      this._pd=date;
+      document.getElementById('permOv').classList.add('open');
+    }
   },
 
   punch(date){
@@ -561,7 +565,8 @@ const T={
         const pos=await new Promise((res,rej)=>
           navigator.geolocation.getCurrentPosition(res,rej,{enableHighAccuracy:true,timeout:10000,maximumAge:0})
         );
-        this._perm='granted';document.getElementById('blkd').style.display='none';
+        this._perm='granted';
+        document.getElementById('blkd').style.display='none';
         const a=await nom(pos.coords.latitude,pos.coords.longitude);
         return a||`${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)}`;
       }catch(e){if(e.code===1){this._perm='denied';document.getElementById('blkd').style.display='block';}}
