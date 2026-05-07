@@ -264,7 +264,7 @@ header h1{font-size:14px;font-weight:600;letter-spacing:.05em;text-transform:upp
 <script>
 // ─── CONFIGURATION ────────────────────────────────────────────────────────────
 // Paste your Google Apps Script web app URL here after deploying it
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyBvR5K86bWLREED-eocnhnx4p3OWZ3H2_HUcb5JzPFNKfjnXsA027glmGD1YbWPuJJZQ/exec";
+const SCRIPT_URL = "YOUR_GOOGLE_APPS_SCRIPT_URL_HERE";
 
 // If this is a personal employee file, their name is locked here (set by generateFile)
 const LOCKED_NAME = null;
@@ -313,16 +313,21 @@ const S = {
     if(!confirm(`Remove "${this.list[i]}"?`)) return;
     this.list.splice(i,1); this.save(); this.render();
   },
-  downloadFor(name){
-    // Generate a personalized copy of this file locked to this employee
-    let src=document.documentElement.outerHTML;
-    src=src.replace('const LOCKED_NAME = null;',`const LOCKED_NAME = "${name}";`);
-    src=src.replace('id="manageBtn" onclick="S.open()"','id="manageBtn" style="display:none"');
-    const blob=new Blob([src],{type:'text/html'});
-    const url=URL.createObjectURL(blob);
-    const a=Object.assign(document.createElement('a'),{href:url,download:`Timesheet_${name.replace(/\s+/g,'_')}.html`});
-    a.click(); URL.revokeObjectURL(url);
-    toast(`Downloaded file for ${name}`);
+  async downloadFor(name){
+    // Fetch the original clean source so the employee file has no pre-rendered dropdown
+    try{
+      const r=await fetch(location.href);
+      let src=await r.text();
+      src=src.replace('const LOCKED_NAME = null;',`const LOCKED_NAME = "${name}";`);
+      src=src.replace('id="manageBtn" onclick="S.open()"','id="manageBtn" style="display:none"');
+      const blob=new Blob([src],{type:'text/html'});
+      const url=URL.createObjectURL(blob);
+      const a=Object.assign(document.createElement('a'),{href:url,download:`Timesheet_${name.replace(/\s+/g,'_')}.html`});
+      a.click(); URL.revokeObjectURL(url);
+      toast(`Downloaded file for ${name}`);
+    }catch(err){
+      toast('Could not fetch source — make sure you are on the live GitHub link');
+    }
   }
 };
 
