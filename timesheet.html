@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Sales Team Timesheet</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Sora:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0f1117;--surface:#181c26;--surface2:#1e2330;--border:#2a3045;
+  --text:#eef0f6;--muted:#6b7494;
+  --green:#2de399;--green-dim:#1a7a56;
+  --red:#ff5c5c;--red-dim:#7a2222;
+  --blue:#4f9cf9;--amber:#f9c94f;
+  --mono:'DM Mono',monospace;--sans:'Sora',sans-serif;
+  --r:14px;--rs:8px;
+}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:100vh;padding-bottom:60px;-webkit-font-smoothing:antialiased}
+header{background:var(--surface);border-bottom:1px solid var(--border);padding:18px 20px 14px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10}
+.hlogo{display:flex;align-items:center;gap:10px}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);flex-shrink:0;transition:background .3s,box-shadow .3s}
+.dot.red{background:var(--red);box-shadow:0 0 8px var(--red)}
+header h1{font-size:15px;font-weight:600;letter-spacing:.04em;text-transform:uppercase}
+#liveClock{font-family:var(--mono);font-size:13px;color:var(--muted);letter-spacing:.05em}
+
+/* HTTPS warning banner */
+.https-warning{background:rgba(249,201,79,.08);border:1px solid rgba(249,201,79,.3);border-radius:var(--rs);padding:14px 16px;margin-bottom:16px;display:none}
+.https-warning h3{font-size:13px;font-weight:600;color:var(--amber);margin-bottom:6px;letter-spacing:.02em}
+.https-warning p{font-size:12px;color:var(--muted);line-height:1.6}
+.https-warning a{color:var(--blue);text-decoration:none}
+.https-warning a:hover{text-decoration:underline}
+.https-warning code{background:var(--surface2);padding:1px 5px;border-radius:3px;font-family:var(--mono);font-size:11px;color:var(--text)}
+
+.main{max-width:540px;margin:0 auto;padding:24px 16px 0}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:20px;margin-bottom:16px}
+.clabel{font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:14px}
+.name-row{display:flex;gap:10px}
+.fg{flex:1;display:flex;flex-direction:column;gap:6px}
+.fg label{font-size:11px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;font-weight:500}
+.fg input{background:var(--surface2);border:1px solid var(--border);border-radius:var(--rs);color:var(--text);font-family:var(--sans);font-size:14px;padding:10px 12px;width:100%;outline:none;transition:border-color .2s}
+.fg input:focus{border-color:var(--blue)}
+.fg input::placeholder{color:var(--muted);opacity:.6}
+.fg input:disabled{opacity:.4;cursor:not-allowed}
+.status-bar{background:var(--surface2);border:1px solid var(--border);border-radius:var(--rs);padding:10px 14px;font-family:var(--mono);font-size:12px;color:var(--muted);margin-bottom:16px;display:flex;align-items:center;gap:8px;min-height:40px;transition:all .3s}
+.status-bar.active{border-color:var(--green-dim);color:var(--green);background:rgba(45,227,153,.05)}
+.status-bar.locating{border-color:var(--amber);color:var(--amber);background:rgba(249,201,79,.05)}
+.pulse{width:7px;height:7px;border-radius:50%;background:currentColor;flex-shrink:0;animation:blink 1.4s infinite}
+@keyframes blink{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.7)}}
+.btn-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.btn{padding:16px 12px;border-radius:var(--r);border:1.5px solid;font-family:var(--sans);font-size:15px;font-weight:600;cursor:pointer;transition:all .15s;display:flex;flex-direction:column;align-items:center;gap:6px;-webkit-tap-highlight-color:transparent}
+.btn:active{transform:scale(.97)}
+.btn:disabled{opacity:.3;cursor:not-allowed;transform:none}
+.btn-icon{font-size:26px;line-height:1}
+.btn-in{background:rgba(45,227,153,.08);border-color:var(--green-dim);color:var(--green)}
+.btn-in:not(:disabled):hover{background:rgba(45,227,153,.16);border-color:var(--green)}
+.btn-out{background:rgba(255,92,92,.08);border-color:var(--red-dim);color:var(--red)}
+.btn-out:not(:disabled):hover{background:rgba(255,92,92,.16);border-color:var(--red)}
+.session-timer{text-align:center;margin-top:14px;font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:.08em}
+.session-timer span{color:var(--green);font-size:18px;display:block;margin-top:2px}
+.log-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.export-btn{font-family:var(--sans);font-size:11px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--blue);background:rgba(79,156,249,.1);border:1px solid rgba(79,156,249,.3);border-radius:6px;padding:5px 12px;cursor:pointer;transition:all .15s}
+.export-btn:hover{background:rgba(79,156,249,.18)}
+.log-empty{text-align:center;padding:30px 0;color:var(--muted);font-size:13px;font-family:var(--mono)}
+.log-entry{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:10px;animation:slideIn .25s ease;position:relative}
+@keyframes slideIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+.entry-name{font-size:14px;font-weight:600;color:var(--text);margin-bottom:4px}
+.entry-times{font-family:var(--mono);font-size:12px;margin-bottom:6px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.chip{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:5px;font-size:11px}
+.chip-in{background:rgba(45,227,153,.1);color:var(--green);border:1px solid rgba(45,227,153,.2)}
+.chip-out{background:rgba(255,92,92,.1);color:var(--red);border:1px solid rgba(255,92,92,.2)}
+.chip-dur{background:rgba(79,156,249,.1);color:var(--blue);border:1px solid rgba(79,156,249,.2)}
+.chip-wait{background:rgba(249,201,79,.1);color:var(--amber);border:1px solid rgba(249,201,79,.2);animation:blink 1.8s infinite}
+.entry-loc{font-size:11px;color:var(--muted);display:flex;gap:5px;align-items:flex-start;line-height:1.5}
+.del-btn{position:absolute;top:10px;right:12px;background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;padding:4px;border-radius:4px;line-height:1;transition:color .15s}
+.del-btn:hover{color:var(--red)}
+.total-bar{background:var(--surface2);border:1px solid var(--border);border-radius:var(--rs);padding:12px 16px;margin-top:6px;display:flex;justify-content:space-between;align-items:center}
+.total-label{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:500}
+.total-val{font-family:var(--mono);font-size:15px;color:var(--blue);font-weight:500}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 20px;font-size:13px;color:var(--text);font-family:var(--mono);opacity:0;transition:all .3s;pointer-events:none;white-space:nowrap;z-index:100}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+@media(max-width:400px){.name-row{flex-direction:column}}
+</style>
+</head>
+<body>
+<header>
+  <div class="hlogo">
+    <div class="dot" id="headerDot"></div>
+    <h1>Sales Timesheet</h1>
+  </div>
+  <div id="liveClock">--:-- --</div>
+</header>
+
+<div class="main">
+
+  <!-- HTTPS warning — shown only when not on https -->
+  <div class="https-warning" id="httpsWarning">
+    <h3>⚠️ Exact location requires HTTPS hosting</h3>
+    <p>
+      This file is being opened directly from your computer. Browsers only allow GPS access on secure <code>https://</code> websites, so exact street addresses won't work here.<br><br>
+      To fix this, drag and drop this file onto <a href="https://app.netlify.com/drop" target="_blank">app.netlify.com/drop</a> — it's free, takes 30 seconds, and gives you a shareable link your whole team can use.
+    </p>
+  </div>
+
+  <div class="card">
+    <div class="clabel">Employee</div>
+    <div class="name-row">
+      <div class="fg"><label>First Name</label><input type="text" id="firstName" placeholder="e.g. Jordan" autocomplete="given-name"></div>
+      <div class="fg"><label>Last Name</label><input type="text" id="lastName" placeholder="e.g. Smith" autocomplete="family-name"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="clabel">Actions</div>
+    <div class="status-bar" id="statusBar"><div class="pulse"></div><span id="statusText">Ready — enter your name to begin</span></div>
+    <div class="btn-row">
+      <button class="btn btn-in" id="btnIn" disabled onclick="checkIn()"><span class="btn-icon">↓</span>CHECK IN</button>
+      <button class="btn btn-out" id="btnOut" disabled onclick="checkOut()"><span class="btn-icon">↑</span>CHECK OUT</button>
+    </div>
+    <div class="session-timer" id="sessionTimer" style="display:none">Session in progress<span id="timerDisplay">00:00:00</span></div>
+  </div>
+
+  <div class="card">
+    <div class="log-header">
+      <div class="clabel" style="margin-bottom:0">Time Log</div>
+      <button class="export-btn" onclick="exportCSV()">Export CSV</button>
+    </div>
+    <div id="logList"><div class="log-empty">No entries yet</div></div>
+    <div class="total-bar" id="totalBar" style="display:none">
+      <span class="total-label">Total Hours Today</span>
+      <span class="total-val" id="totalHours">0h 00m</span>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const log=[];
+let sessionStart=null,sessionLoc=null,timerIv=null,isIn=false;
+
+// Show HTTPS warning if not on https or localhost
+if(location.protocol!=='https:' && location.hostname!=='localhost'){
+  document.getElementById('httpsWarning').style.display='block';
+}
+
+// Clock
+setInterval(()=>{
+  document.getElementById('liveClock').textContent=
+    new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+},1000);
+
+// Name inputs
+['firstName','lastName'].forEach(id=>
+  document.getElementById(id).addEventListener('input',()=>{
+    if(isIn)return;
+    const ok=!!getName();
+    document.getElementById('btnIn').disabled=!ok;
+    document.getElementById('btnOut').disabled=true;
+    setStatus('',ok?'Ready to check in':'Ready — enter your name to begin');
+  })
+);
+
+function getName(){
+  const f=document.getElementById('firstName').value.trim();
+  const l=document.getElementById('lastName').value.trim();
+  return f&&l?`${f} ${l}`:null;
+}
+
+function setStatus(cls,msg){
+  const b=document.getElementById('statusBar');
+  b.className='status-bar'+(cls?' '+cls:'');
+  document.getElementById('statusText').textContent=msg;
+}
+
+// ─── GPS + Nominatim ──────────────────────────────────────────────────────────
+async function getLocation(){
+  if(!navigator.geolocation){
+    return 'GPS not supported on this device';
+  }
+  try{
+    const pos=await new Promise((res,rej)=>
+      navigator.geolocation.getCurrentPosition(res,rej,{enableHighAccuracy:true,timeout:12000,maximumAge:0})
+    );
+    return await reverseGeocode(pos.coords.latitude, pos.coords.longitude);
+  }catch(e){
+    if(e.code===1) return 'Location permission denied — please allow location access';
+    if(e.code===2) return 'GPS signal unavailable';
+    return 'Location timed out';
+  }
+}
+
+async function reverseGeocode(lat,lon){
+  try{
+    const ctrl=new AbortController();
+    const id=setTimeout(()=>ctrl.abort(),8000);
+    const r=await fetch(
+      `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&addressdetails=1`,
+      {signal:ctrl.signal,headers:{'Accept-Language':'en','User-Agent':'SalesTimesheet/1.0'}}
+    );
+    clearTimeout(id);
+    const d=await r.json();
+    const a=d.address||{};
+    const num=a.house_number||'';
+    const road=a.road||a.pedestrian||a.street||a.footway||'';
+    const city=a.city||a.town||a.village||a.suburb||'';
+    const prov=a.state||a.province||'';
+    let addr=num&&road?`${num} ${road}`:road||(d.display_name||'').split(',')[0]||'';
+    if(city) addr+=`${addr?', ':''}${city}`;
+    if(prov) addr+=`, ${prov}`;
+    return addr.trim()||`${lat.toFixed(5)}, ${lon.toFixed(5)}`;
+  }catch(_){
+    return `${lat.toFixed(5)}, ${lon.toFixed(5)}`;
+  }
+}
+
+// ─── Check In ────────────────────────────────────────────────────────────────
+async function checkIn(){
+  if(!getName()||isIn)return;
+  lockFields(true);
+  document.getElementById('btnIn').disabled=true;
+  document.getElementById('btnOut').disabled=true;
+  setStatus('locating','📍 Getting your location...');
+
+  const addr=await getLocation();
+  const now=new Date();
+  sessionStart=now; sessionLoc=addr; isIn=true;
+
+  document.getElementById('headerDot').classList.add('red');
+  document.getElementById('btnOut').disabled=false;
+  setStatus('active',`✓ Checked in — ${fmtTime(now)}`);
+  document.getElementById('sessionTimer').style.display='block';
+  timerIv=setInterval(()=>{
+    document.getElementById('timerDisplay').textContent=fmtElapsed(Date.now()-sessionStart.getTime());
+  },1000);
+  showToast(`Checked in at ${fmtTime(now)}`);
+}
+
+// ─── Check Out ───────────────────────────────────────────────────────────────
+async function checkOut(){
+  if(!isIn)return;
+  document.getElementById('btnOut').disabled=true;
+  setStatus('locating','📍 Getting checkout location...');
+
+  const addr=await getLocation();
+  const now=new Date();
+  const dur=now-sessionStart;
+  log.unshift({id:Date.now(),name:getName(),inTime:sessionStart,outTime:now,duration:dur,inAddr:sessionLoc,outAddr:addr});
+
+  clearInterval(timerIv);
+  sessionStart=null; sessionLoc=null; isIn=false;
+  document.getElementById('timerDisplay').textContent='00:00:00';
+  document.getElementById('sessionTimer').style.display='none';
+  document.getElementById('headerDot').classList.remove('red');
+  lockFields(false);
+  document.getElementById('btnIn').disabled=false;
+  document.getElementById('btnOut').disabled=true;
+  setStatus('active',`Checked out at ${fmtTime(now)}`);
+  renderLog();
+  showToast(`Checked out — ${fmtDur(dur)}`);
+}
+
+function lockFields(on){
+  document.getElementById('firstName').disabled=on;
+  document.getElementById('lastName').disabled=on;
+}
+
+// ─── Render log ───────────────────────────────────────────────────────────────
+function renderLog(){
+  const el=document.getElementById('logList');
+  const tb=document.getElementById('totalBar');
+  if(!log.length){el.innerHTML='<div class="log-empty">No entries yet</div>';tb.style.display='none';return;}
+  tb.style.display='flex';
+  const ms=log.reduce((s,e)=>s+(e.duration||0),0);
+  document.getElementById('totalHours').textContent=
+    `${Math.floor(ms/3600000)}h ${String(Math.floor((ms%3600000)/60000)).padStart(2,'0')}m`;
+  el.innerHTML=log.map(e=>`
+    <div class="log-entry">
+      <button class="del-btn" onclick="delEntry(${e.id})">✕</button>
+      <div class="entry-name">${e.name}</div>
+      <div class="entry-times">
+        <span class="chip chip-in">▼ IN ${fmtTime(e.inTime)}</span>
+        ${e.outTime
+          ?`<span class="chip chip-out">▲ OUT ${fmtTime(e.outTime)}</span><span class="chip chip-dur">⏱ ${fmtDur(e.duration)}</span>`
+          :`<span class="chip chip-wait">⏳ In progress</span>`}
+      </div>
+      <div class="entry-loc"><span>📍</span><div>
+        <span style="color:var(--blue)">In:</span> ${e.inAddr}
+        ${e.outTime?`<br><span style="color:var(--red)">Out:</span> ${e.outAddr}`:''}
+      </div></div>
+    </div>`).join('');
+}
+
+function delEntry(id){const i=log.findIndex(e=>e.id===id);if(i!==-1){log.splice(i,1);renderLog();}}
+
+// ─── CSV ──────────────────────────────────────────────────────────────────────
+function exportCSV(){
+  if(!log.length){showToast('No entries to export');return;}
+  const rows=[['Name','Date','Check In','Check Out','Duration','Check In Address','Check Out Address'],
+    ...log.map(e=>[`"${e.name}"`,fmtDate(e.inTime),fmtTime(e.inTime),
+      e.outTime?fmtTime(e.outTime):'In progress',
+      e.outTime?fmtDur(e.duration):'',
+      `"${e.inAddr}"`,`"${e.outTime?e.outAddr:''}"`])];
+  const a=Object.assign(document.createElement('a'),{
+    href:URL.createObjectURL(new Blob([rows.map(r=>r.join(',')).join('\n')],{type:'text/csv'})),
+    download:`timesheet_${fmtDate(new Date())}.csv`});
+  a.click();URL.revokeObjectURL(a.href);
+  showToast('CSV exported!');
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+function fmtTime(d){return d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:true});}
+function fmtDate(d){return d.toLocaleDateString('en-CA');}
+function fmtDur(ms){const h=Math.floor(ms/3600000),m=Math.floor((ms%3600000)/60000);return h>0?`${h}h ${String(m).padStart(2,'0')}m`:`${m}m`;}
+function fmtElapsed(ms){const s=Math.floor(ms/1000);return `${String(Math.floor(s/3600)).padStart(2,'0')}:${String(Math.floor((s%3600)/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;}
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2600);}
+</script>
+</body>
+</html>
