@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="locked-employee" content="">
 <title>Sales Timesheet</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Sora:wght@300;400;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/flatpickr.min.css">
@@ -266,8 +267,8 @@ header h1{font-size:14px;font-weight:600;letter-spacing:.05em;text-transform:upp
 // Paste your Google Apps Script web app URL here after deploying it
 const SCRIPT_URL = "YOUR_GOOGLE_APPS_SCRIPT_URL_HERE";
 
-// If this is a personal employee file, their name is locked here (set by generateFile)
-const LOCKED_NAME = null;
+// If this is a personal employee file, their name is locked via meta tag
+const LOCKED_NAME = document.querySelector('meta[name="locked-employee"]')?.content || null;
 
 // Pay period anchor — every 14 days from this date
 const ANCHOR = new Date("2026-04-06T12:00:00");
@@ -314,19 +315,29 @@ const S = {
     this.list.splice(i,1); this.save(); this.render();
   },
   async downloadFor(name){
-    // Fetch the original clean source so the employee file has no pre-rendered dropdown
     try{
       const r=await fetch(location.href);
       let src=await r.text();
-      src=src.replace('const LOCKED_NAME = null;',`const LOCKED_NAME = "${name}";`);
-      src=src.replace('id="manageBtn" onclick="S.open()"','id="manageBtn" style="display:none"');
+      // Embed the employee name in the meta tag — no JS patching needed
+      src=src.replace(
+        '<meta name="locked-employee" content="">',
+        `<meta name="locked-employee" content="${name}">`
+      );
+      // Hide the Manage Staff button
+      src=src.replace(
+        'id="manageBtn" onclick="S.open()"',
+        'id="manageBtn" style="display:none" onclick="S.open()"'
+      );
       const blob=new Blob([src],{type:'text/html'});
       const url=URL.createObjectURL(blob);
-      const a=Object.assign(document.createElement('a'),{href:url,download:`Timesheet_${name.replace(/\s+/g,'_')}.html`});
+      const a=Object.assign(document.createElement('a'),{
+        href:url,
+        download:`Timesheet_${name.replace(/\s+/g,'_')}.html`
+      });
       a.click(); URL.revokeObjectURL(url);
       toast(`Downloaded file for ${name}`);
     }catch(err){
-      toast('Could not fetch source — make sure you are on the live GitHub link');
+      toast('Download failed — make sure you are on the live GitHub link');
     }
   }
 };
