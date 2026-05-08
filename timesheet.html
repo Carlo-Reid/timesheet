@@ -339,7 +339,7 @@ const T={
     if(ps) ps.value=curVal;
   },
 
-  load(){
+  async load(){
     const name=LOCKED||(document.getElementById('esel')?.value||'');
     const ps=document.getElementById('psel')?.value||'';
     if(!name){toast('Select an employee');return;}
@@ -355,6 +355,37 @@ const T={
     const e=new Date(ps+'T12:00:00'),end=new Date(e);end.setDate(e.getDate()+13);
     document.getElementById('bdates').textContent=`${fd(e)} → ${fd(end)}`;
     this.render();
+    // If local storage is empty, try fetching from the saved draft on Google Sheets
+    if(!this.hasData()) await this.fetchDraft();
+  },
+
+  // Returns true if any day in this period has punch data
+  hasData(){
+    return this.days.some(d=>{
+      const e=this.data[d];
+      return e&&((e.punches&&e.punches.length>0)||e.active);
+    });
+  },
+
+  // Fetches draft data from Google Sheets and restores it if found
+  async fetchDraft(){
+    if(SCRIPT_URL==="YOUR_GOOGLE_APPS_SCRIPT_URL_HERE")return;
+    try{
+      toast('No local data — checking sheet…');
+      const url=`${SCRIPT_URL}?action=load_draft&tech=${encodeURIComponent(this.name)}&period=${encodeURIComponent(this.ps)}`;
+      const r=await fetch(url);
+      const j=await r.json();
+      if(j.found&&j.data&&Object.keys(j.data).length){
+        this.data=j.data;
+        this.save();// cache locally so next open is instant
+        this.render();
+        toast('✓ Data restored from sheet');
+      } else {
+        toast('No saved data found for this period');
+      }
+    }catch(err){
+      // Silently fail — network issues shouldn't block the UI
+    }
   },
 
   back(){
