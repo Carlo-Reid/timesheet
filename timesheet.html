@@ -116,6 +116,12 @@ header h1{font-size:13px;font-weight:700;letter-spacing:.05em;text-transform:upp
 .blkd span{font-size:10px;color:var(--mut);line-height:1.5}
 .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(16px);background:#1a1d2e;border-radius:9px;padding:9px 18px;font-size:12px;color:#eef0f6;font-family:var(--mono);opacity:0;transition:all .25s;pointer-events:none;white-space:nowrap;z-index:100}
 .toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+.csync{font-size:10px;font-weight:600;padding:3px 8px;border-radius:99px;display:inline-flex;align-items:center;gap:4px;font-family:var(--mono)}
+.csync-saving{background:var(--blu2);color:var(--blu);border:1px solid rgba(21,101,192,.2)}
+.csync-ok{background:rgba(21,128,75,.1);color:var(--grn);border:1px solid rgba(21,128,75,.2)}
+.csync-err{background:var(--red3);color:var(--red);border:1px solid var(--red2)}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spin{display:inline-block;width:9px;height:9px;border:1.5px solid currentColor;border-top-color:transparent;border-radius:50%;animation:spin .7s linear infinite}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.4}}
 @media(max-width:460px){.dname{min-width:72px}.ptline{flex-direction:column;gap:2px}.btns{width:100%}.abtn{flex:1;text-align:center}}
 </style>
@@ -158,6 +164,7 @@ header h1{font-size:13px;font-weight:700;letter-spacing:.05em;text-transform:upp
 <header>
   <div class="hlogo"><div class="dot"></div><h1>Sales Timesheet</h1></div>
   <div class="hright">
+    <div id="cloud-status"></div>
     <div id="clk"></div>
     <button class="mgr-btn" id="mgrBtn" onclick="S.open()">👥 Staff</button>
   </div>
@@ -348,6 +355,8 @@ const T={
     this.days=[];
     const base=new Date(ps+'T12:00:00');
     for(let i=0;i<14;i++){const d=new Date(base);d.setDate(base.getDate()+i);this.days.push(d.toISOString().split('T')[0]);}
+
+    // 1. Load from localStorage first — instant render
     try{const s=localStorage.getItem(this.key());this.data=s?JSON.parse(s):{};}catch(e){this.data={};}
     document.getElementById('setup').style.display='none';
     document.getElementById('sheet').style.display='block';
@@ -355,8 +364,19 @@ const T={
     const e=new Date(ps+'T12:00:00'),end=new Date(e);end.setDate(e.getDate()+13);
     document.getElementById('bdates').textContent=`${fd(e)} → ${fd(end)}`;
     this.render();
-    // If local storage is empty, try fetching from the saved draft on Google Sheets
-    if(!this.hasData()) await this.fetchDraft();
+
+    // 2. Always fetch from cloud to get the freshest data (catches changes from other devices)
+    if(SCRIPT_URL!=='YOUR_GOOGLE_APPS_SCRIPT_URL_HERE'){
+      this.setCloudStatus('loading');
+      const fromCloud=await this.loadFromCloud();
+      if(fromCloud){
+        this.render();
+        this.setCloudStatus('saved');
+        toast('✓ Data loaded from cloud');
+      } else {
+        this.setCloudStatus(this.hasData()?'saved':'');
+      }
+    }
   },
 
   // Returns true if any day in this period has punch data
@@ -367,27 +387,6 @@ const T={
     });
   },
 
-  // Fetches draft data from Google Sheets and restores it if found
-  async fetchDraft(){
-    if(SCRIPT_URL==="YOUR_GOOGLE_APPS_SCRIPT_URL_HERE")return;
-    try{
-      toast('No local data — checking sheet…');
-      const url=`${SCRIPT_URL}?action=load_draft&tech=${encodeURIComponent(this.name)}&period=${encodeURIComponent(this.ps)}`;
-      const r=await fetch(url);
-      const j=await r.json();
-      if(j.found&&j.data&&Object.keys(j.data).length){
-        this.data=j.data;
-        this.save();// cache locally so next open is instant
-        this.render();
-        toast('✓ Data restored from sheet');
-      } else {
-        toast('No saved data found for this period');
-      }
-    }catch(err){
-      // Silently fail — network issues shouldn't block the UI
-    }
-  },
-
   back(){
     document.getElementById('setup').style.display='block';
     document.getElementById('sheet').style.display='none';
@@ -395,8 +394,63 @@ const T={
   },
 
   key(){return`ts|${this.ps}|${this.name}`;},
-  save(){try{localStorage.setItem(this.key(),JSON.stringify(this.data));}catch(e){}},
+  // Save to localStorage instantly, then schedule a debounced draft save to Google Sheets
+  save(){
+    try{localStorage.setItem(this.key(),JSON.stringify(this.data));}catch(e){}
+    this.scheduleDraftSave();
+  },
   day(d){return this.data[d]||(this.data[d]={punches:[],active:null,activeLoc:''});},
+
+  // ── Cloud sync ────────────────────────────────────────────────
+  scheduleDraftSave(){
+    clearTimeout(this._draftTimer);
+    this._draftTimer=setTimeout(()=>this.saveDraft(),2000);
+    this.setCloudStatus('pending');
+  },
+
+  setCloudStatus(state){
+    const el=document.getElementById('cloud-status');
+    if(!el)return;
+    if(state==='pending') el.innerHTML='<span class="csync csync-saving"><span class="spin"></span> Saving…</span>';
+    else if(state==='saved') el.innerHTML='<span class="csync csync-ok">☁ Saved</span>';
+    else if(state==='loading') el.innerHTML='<span class="csync csync-saving"><span class="spin"></span> Loading…</span>';
+    else if(state==='error') el.innerHTML='<span class="csync csync-err">☁ Save failed</span>';
+    else el.innerHTML='';
+  },
+
+  async saveDraft(){
+    if(SCRIPT_URL==='YOUR_GOOGLE_APPS_SCRIPT_URL_HERE')return;
+    try{
+      await fetch(SCRIPT_URL,{
+        method:'POST',mode:'no-cors',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({
+          action:'save_draft',
+          techName:this.name,
+          periodStart:this.ps,
+          data:this.data
+        })
+      });
+      this.setCloudStatus('saved');
+    }catch(e){this.setCloudStatus('error');}
+  },
+
+  async loadFromCloud(){
+    if(SCRIPT_URL==='YOUR_GOOGLE_APPS_SCRIPT_URL_HERE')return false;
+    try{
+      const url=`${SCRIPT_URL}?action=load_draft&tech=${encodeURIComponent(this.name)}&period=${encodeURIComponent(this.ps)}`;
+      const r=await fetch(url,{redirect:'follow'});
+      if(!r.ok)return false;
+      const j=await r.json();
+      if(j&&j.found&&j.data&&Object.keys(j.data).length){
+        this.data=j.data;
+        // Cache locally so next open is instant
+        try{localStorage.setItem(this.key(),JSON.stringify(this.data));}catch(e){}
+        return true;
+      }
+    }catch(e){}
+    return false;
+  },
 
   tap(date){
     if(this._perm==='granted'){this.punch(date);}
