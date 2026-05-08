@@ -1,0 +1,2363 @@
+<html lang="en"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Technician Timesheet</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&amp;family=Barlow:wght@400;500;600&amp;family=Barlow+Condensed:wght@600;700&amp;display=swap">
+<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx-js-style.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/flatpickr.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/flatpickr.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --green:#1D9E75; --green-d:#0F6E56; --green-l:#E1F5EE;
+    --amber:#BA7517; --amber-l:#FAEEDA;
+    --red:#A32D2D; --red-l:#FCEBEB;
+    --g50:#F7F7F5; --g100:#EBEBEA; --g300:#C4C4C2;
+    --g500:#808080; --g700:#444441; --g900:#1A1A18;
+    --r:8px; --rl:12px;
+    --mono:'Courier New',monospace; --sans:system-ui,-apple-system,sans-serif;
+  }
+  body{font-family:var(--sans);background:var(--g50);color:var(--g900);min-height:100vh;padding:1.5rem 1rem}
+  .wrap{max-width:780px;margin:0 auto}
+  .app-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;flex-wrap:wrap;gap:.75rem}
+  .app-title{font-size:20px;font-weight:600} .app-title span{color:var(--green)}
+  .card{background:#fff;border:1px solid var(--g100);border-radius:var(--rl);padding:1.25rem;margin-bottom:1rem}
+  .card-title{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--g500);margin-bottom:.85rem}
+  .setup-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:.75rem;align-items:end}
+  @media(max-width:520px){.setup-grid{grid-template-columns:1fr}}
+  .field label{display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--g500);margin-bottom:.3rem}
+  .field input{width:100%;padding:.5rem .7rem;border:1px solid var(--g300);border-radius:var(--r);font-size:14px;font-family:var(--sans);background:#fff;color:var(--g900)}
+  .field input:focus{outline:none;border-color:var(--green);box-shadow:0 0 0 3px rgba(29,158,117,.12)}
+  .week-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--g500);margin:.75rem 0 .4rem}
+  .day-tabs{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:.5rem}
+  .day-tab{padding:.45rem .25rem;border:1px solid var(--g100);border-radius:var(--r);background:transparent;cursor:pointer;text-align:center;font-family:var(--sans);line-height:1.3}
+  .day-tab .dn{display:block;font-size:12px;font-weight:600;color:var(--g700)}
+  .day-tab .dd{display:block;font-size:11px;color:var(--g500)}
+  .day-tab .dh{display:block;font-size:11px;color:var(--g500);margin-top:1px}
+  .day-tab:hover{background:var(--g50)}
+  .day-tab.active{border-color:var(--green);background:var(--green-l)}
+  .day-tab.active .dn{color:var(--green-d)} .day-tab.active .dh{color:var(--green-d)}
+  .day-tab.has-data .dh{color:var(--green)}
+  .day-tab.synced .dh{color:var(--green-d);font-weight:700}
+  /* Start row */
+  .start-row{display:flex;align-items:center;gap:.75rem;padding:.55rem .75rem;background:var(--g50);border:1px solid var(--g100);border-radius:var(--r);margin-bottom:.5rem}
+  .start-row label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--g500);white-space:nowrap;min-width:72px}
+  .start-row input{padding:.35rem .5rem;border:1px solid var(--g300);border-radius:var(--r);font-size:14px;font-family:var(--mono);font-weight:600;color:var(--g900);background:#fff;width:130px}
+  .start-row input:focus{outline:none;border-color:var(--green)}
+  .start-hint{font-size:11px;color:var(--g500)}
+  /* Col headers */
+  .ehdr{display:grid;grid-template-columns:72px 140px 140px 1fr 1fr 62px 62px 62px;gap:6px;margin-bottom:4px;padding:0 2px}
+  .erow{display:grid;grid-template-columns:72px 140px 140px 1fr 1fr 62px 62px 62px;gap:6px;margin-bottom:5px;align-items:center}
+  .tw{display:flex;gap:3px;align-items:center}
+  .tw select{padding:.38rem .3rem;border:1px solid var(--g100);border-radius:var(--r);font-size:12px;font-family:var(--mono);color:var(--g900);background:var(--g50);min-width:0}
+  .tw select:focus{outline:none;border-color:var(--green);background:#fff}
+  .tw .tw-ampm{font-family:var(--sans);font-size:12px;font-weight:600}
+  .ehdr span{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--g500)}
+  /* Entry rows */
+  /* erow defined above */
+  .erow input[type=time]{width:100%;padding:.4rem .45rem;border:1px solid var(--g100);border-radius:var(--r);font-size:13px;font-family:var(--mono);color:var(--g900);background:var(--g50)}
+  .erow input[type=time]:focus{outline:none;border-color:var(--green);background:#fff}
+  .erow input.txt{width:100%;padding:.4rem .45rem;border:1px solid var(--g100);border-radius:var(--r);font-size:13px;font-family:var(--sans);color:var(--g900);background:var(--g50)}
+  .erow input.txt:focus{outline:none;border-color:var(--green);background:#fff}
+  .erow select{width:100%;padding:.4rem .45rem;border:1px solid var(--g100);border-radius:var(--r);font-size:13px;font-family:var(--sans);color:var(--g900);background:var(--g50)}
+  .erow select:focus{outline:none;border-color:var(--green);background:#fff}
+  .rhrs{font-size:13px;font-family:var(--mono);font-weight:700;color:var(--green-d);text-align:center;padding:.38rem .2rem;background:var(--green-l);border-radius:var(--r)}
+  .rhrs.dim{background:var(--g50);color:var(--g300)}
+  .rhrs-ot{font-size:13px;font-family:var(--mono);font-weight:700;color:#C62828;text-align:center;padding:.38rem .2rem;background:#FFEBEE;border-radius:var(--r)}
+  .rhrs-ot.dim{background:var(--g50);color:var(--g300)}
+  .ot-btn{width:100%;padding:.38rem .2rem;border-radius:var(--r);font-size:11px;font-weight:700;font-family:var(--sans);cursor:pointer;border:1px solid var(--g300);background:var(--g50);color:var(--g500);text-align:center;line-height:1.3;transition:background .15s,border-color .15s}
+  .ot-btn:hover{background:var(--g100)}
+  .ot-btn.is-ot{background:#FFEBEE;border-color:#EF9A9A;color:#C62828}
+  .ot-btn.is-ot:hover{background:#FFCDD2}
+  .del{width:28px;height:30px;border:none;background:transparent;cursor:pointer;color:var(--g300);font-size:18px;border-radius:4px;display:flex;align-items:center;justify-content:center}
+  .del:hover{background:var(--red-l);color:var(--red)}
+  .rst{width:28px;height:30px;border:none;background:transparent;cursor:pointer;color:var(--g300);font-size:15px;border-radius:4px;display:flex;align-items:center;justify-content:center}
+  .rst:hover{background:var(--amber-l);color:var(--amber)}
+  .erow-actions{display:flex;gap:2px;align-items:center;justify-content:flex-end}
+  .day-off-select{padding:.35rem .4rem;border:1px solid var(--g300);border-radius:var(--r);font-size:12px;font-family:var(--sans);color:var(--g500);background:var(--g50);cursor:pointer;white-space:nowrap}
+  .day-off-select:focus{outline:none;border-color:var(--amber)}
+  .day-off-select.is-off{background:var(--amber-l);border-color:var(--amber);color:var(--amber);font-weight:700}
+  .day-off-banner{display:flex;align-items:center;gap:.5rem;padding:.45rem .75rem;background:var(--amber-l);border:1px solid var(--amber);border-radius:var(--r);margin-bottom:.5rem;font-size:13px;font-weight:600;color:var(--amber)}
+  .add-btn{width:100%;padding:.45rem;border:1px dashed var(--g300);border-radius:var(--r);background:transparent;cursor:pointer;font-size:12px;color:var(--g500);font-family:var(--sans);margin-top:6px}
+  .add-btn:hover{background:var(--g50);color:var(--g700)}
+  /* Gap */
+  .gap-row{display:flex;align-items:center;gap:.5rem;padding:.25rem .2rem;margin:2px 0}
+  .gline{flex:1;height:1px;background:var(--g100)}
+  .glabel{font-size:11px;color:var(--g500);white-space:nowrap}
+  .ghrs{font-size:11px;font-family:var(--mono);font-weight:700;color:var(--amber);background:var(--amber-l);padding:.15rem .45rem;border-radius:99px}
+  /* Footer */
+  .day-footer{display:flex;align-items:center;justify-content:space-between;margin-top:.9rem;padding-top:.75rem;border-top:1px solid var(--g100);flex-wrap:wrap;gap:.5rem}
+  .dtotal{font-size:13px;color:var(--g500)}
+  .dtotal strong{font-size:17px;font-family:var(--mono);font-weight:700;color:var(--g900)}
+  /* Buttons */
+  .btn{padding:.5rem 1.1rem;border-radius:var(--r);font-size:13px;font-weight:600;font-family:var(--sans);cursor:pointer;border:none}
+  .btn:disabled{opacity:.45;cursor:not-allowed}
+  .btn-g{background:var(--green);color:#fff} .btn-g:hover:not(:disabled){background:var(--green-d)}
+  .btn-o{background:transparent;border:1px solid var(--g300);color:var(--g700)} .btn-o:hover:not(:disabled){background:var(--g50)}
+  /* Summary */
+  .sbar{display:flex;gap:1rem;flex-wrap:wrap}
+  .si{flex:1;min-width:120px}
+  .si .sl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--g500)}
+  .si .sv{font-size:22px;font-weight:700;font-family:var(--mono);color:var(--g900)}
+  /* Misc */
+  .pill{display:inline-flex;align-items:center;gap:5px;padding:.2rem .6rem;border-radius:99px;font-size:11px;font-weight:600}
+  .pill-g{background:var(--green-l);color:var(--green-d)}
+  .pill.dot::before{content:'';width:6px;height:6px;border-radius:50%;background:currentColor}
+  .acts{display:flex;gap:.5rem;flex-wrap:wrap}
+  hr{border:none;border-top:1px solid var(--g100);margin:.75rem 0}
+  /* Toast */
+  #toast{position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%) translateY(80px);padding:.65rem 1.25rem;border-radius:var(--r);font-size:13px;font-weight:500;white-space:nowrap;transition:transform .25s ease;pointer-events:none;z-index:999}
+  #toast.show{transform:translateX(-50%) translateY(0)}
+  #toast.success{background:var(--green);color:#fff}
+  #toast.error{background:var(--red);color:#fff}
+  #toast.info{background:var(--amber);color:#fff}
+  .spin{display:inline-block;width:13px;height:13px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:sp .6s linear infinite;vertical-align:middle;margin-right:5px}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  /* Flatpickr pay-period highlight */
+  .flatpickr-day.pay-start{background:#FFF176!important;color:#7A5700!important;font-weight:700!important;border-color:#F5C800!important}
+  .flatpickr-day.pay-start:hover{background:#F5C800!important}
+  .flatpickr-day.pay-start.selected{background:#1D9E75!important;color:#fff!important;border-color:#1D9E75!important}
+  .flatpickr-day.pay-current{background:#1D9E75!important;color:#fff!important;font-weight:700!important;border-color:#0F6E56!important}
+  .flatpickr-day.pay-current:hover{background:#0F6E56!important}
+  .flatpickr-day.pay-current.selected{background:#0F6E56!important;border-color:#0F6E56!important}
+  #period-start{cursor:pointer;background:#fff}
+
+  /* ── Mobile responsive ── */
+  @media(max-width:640px){
+    body{padding:.75rem .5rem}
+    .wrap{max-width:100%}
+    .app-header{margin-bottom:1rem}
+    .app-title{font-size:17px}
+    .card{padding:.85rem .75rem}
+
+    /* Setup grid stacks on mobile */
+    .setup-grid{grid-template-columns:1fr!important}
+
+    /* Day tabs: smaller text on mobile */
+    .day-tab{padding:.35rem .1rem}
+    .day-tab .dn{font-size:10px}
+    .day-tab .dd{font-size:10px}
+    .day-tab .dh{font-size:9px}
+
+    /* Entry rows: stack to 2 rows on mobile */
+    .ehdr{display:none}
+    .erow{
+      grid-template-columns:1fr 1fr!important;
+      grid-template-rows:auto auto auto;
+      gap:4px;
+      padding:.5rem;
+      background:var(--g50);
+      border-radius:var(--r);
+      border:1px solid var(--g100);
+      margin-bottom:8px;
+    }
+    /* OT button spans full width on mobile */
+    .erow .ot-btn{grid-column:1/3}
+    /* Time widgets take one column each */
+    .erow .tw{width:100%}
+    .erow .tw select{flex:1}
+    /* Client input spans full width */
+    .erow input.txt:first-of-type{grid-column:1/3}
+    /* Job description spans full width */
+    .erow select:last-of-type{grid-column:1/3}
+    /* Hours + delete on same row */
+    .erow .rhrs{grid-column:1;text-align:left}
+    .erow .rhrs-ot{grid-column:2;text-align:left}
+    .erow .erow-actions{grid-column:1/3;justify-content:flex-end;margin-top:2px}
+
+    /* Start row stacks on mobile */
+    .start-row{flex-wrap:wrap;gap:.5rem}
+    .start-row label{min-width:100%;margin-bottom:0}
+    .start-hint{display:none}
+
+    /* Day footer stacks */
+    .day-footer{flex-direction:column;align-items:stretch}
+    .acts{justify-content:stretch}
+    .acts .btn{flex:1;text-align:center}
+
+    /* Summary bar stacks */
+    .sbar{flex-direction:column;gap:.5rem}
+    .si .sv{font-size:18px}
+
+    /* Time widget selects bigger touch targets */
+    .tw select{padding:.45rem .3rem;font-size:13px}
+  }
+  .manage-link{font-size:12px;color:var(--green-d);background:none;border:none;cursor:pointer;font-family:var(--sans);padding:0;text-decoration:underline}
+  .csync{font-size:12px;padding:.2rem .6rem;border-radius:99px;display:inline-flex;align-items:center;gap:4px}
+  .jlimit-warn{display:none;align-items:flex-start;gap:.5rem;padding:.5rem .75rem;background:#FFF3E0;border:1px solid #FFB74D;border-radius:var(--r);margin-bottom:5px;font-size:12px;color:#E65100;flex-direction:column}
+  .jlimit-note{width:100%;margin-top:.35rem;padding:.4rem .5rem;border:1px solid #FFB74D;border-radius:var(--r);font-size:12px;font-family:var(--sans);color:var(--g900);background:#fff;resize:vertical;min-height:52px;line-height:1.4}
+  .jlimit-note:focus{outline:none;border-color:#E65100}
+  .pin-overlay{display:none;position:fixed;top:0;right:0;bottom:0;left:0;background:rgba(0,0,0,.45);z-index:300;align-items:center;justify-content:center}
+  .pin-overlay.open{display:flex}
+  .pin-modal{background:#fff;border-radius:var(--rl);padding:1.5rem;width:280px;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,.2)}
+  .pin-modal h3{font-size:15px;font-weight:600;margin-bottom:.35rem;color:var(--g900)}
+  .pin-modal p{font-size:12px;color:var(--g500);margin-bottom:1rem}
+  .pin-input{width:100%;padding:.65rem;border:1.5px solid var(--g300);border-radius:var(--r);font-size:22px;font-family:var(--mono);text-align:center;letter-spacing:.25em;margin-bottom:.75rem}
+  .pin-input:focus{outline:none;border-color:var(--green)}
+  .pin-input.pin-error{border-color:var(--red);animation:shake .3s}
+  @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+  .pin-row{display:flex;gap:.5rem}
+  .limit-input:disabled{opacity:.4;cursor:not-allowed;background:var(--g100)}
+  .lock-btn{font-size:11px;color:var(--g500);background:none;border:none;cursor:pointer;font-family:var(--sans);padding:0;text-decoration:underline;white-space:nowrap}
+  .lock-btn:hover{color:var(--g700)}
+  .jlimit-warn strong{color:#BF360C}
+  .limit-input{width:65px;padding:.28rem .4rem;border:1px solid var(--g300);border-radius:var(--r);font-size:12px;font-family:var(--mono);text-align:center;color:var(--g900)}
+  .limit-input:focus{outline:none;border-color:var(--green)}
+  .opt-item-row{display:flex;align-items:center;gap:6px}
+  .limit-label{font-size:10px;color:var(--g500);white-space:nowrap}
+  .csync-ok{background:var(--green-l);color:var(--green-d)}
+  .csync-saving{background:var(--amber-l);color:#633806}
+  .csync-err{background:var(--red-l);color:var(--red)}
+  .dl-tech-btn{padding:.25rem .65rem;background:var(--green-l);color:var(--green-d);border:1px solid #9FE1CB;border-radius:var(--r);font-size:12px;font-weight:600;cursor:pointer;font-family:var(--sans);white-space:nowrap}
+  .dl-tech-btn:hover{background:#9FE1CB}
+  .manage-link:hover{color:var(--green)}
+  .no-techs{font-size:13px;color:var(--g500);padding:.5rem 0;font-style:italic}
+  /* Options panel */
+  .opt-overlay{display:none;position:fixed;top:0;right:0;bottom:0;left:0;background:rgba(0,0,0,.35);z-index:100;align-items:center;justify-content:center}
+  .opt-overlay.open{display:flex}
+  .opt-modal{background:#fff;border-radius:var(--rl);padding:1.5rem;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;-webkit-overflow-scrolling:touch;margin:1rem}
+  .opt-modal h2{font-size:16px;font-weight:600;margin-bottom:1.25rem;color:var(--g900)}
+  .opt-section{margin-bottom:1.25rem}
+  .opt-section h3{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--g500);margin-bottom:.6rem}
+  .opt-list{display:flex;flex-direction:column;gap:4px;margin-bottom:.6rem}
+  .opt-item{display:flex;align-items:center;justify-content:space-between;padding:.35rem .6rem;background:var(--g50);border-radius:var(--r);font-size:13px}
+  .opt-item span{color:var(--g700)}
+  .opt-item.default-item span{color:var(--g500)}
+  .opt-item .rm-btn{border:none;background:transparent;cursor:pointer;color:var(--g300);font-size:16px;line-height:1;padding:0 2px;border-radius:3px}
+  .opt-item .rm-btn:hover{color:var(--red);background:var(--red-l)}
+  .opt-add-row{display:flex;gap:6px}
+  .opt-add-row input{flex:1;padding:.4rem .6rem;border:1px solid var(--g300);border-radius:var(--r);font-size:13px;font-family:var(--sans);color:var(--g900)}
+  .opt-add-row input:focus{outline:none;border-color:var(--green)}
+  .opt-add-row button{padding:.4rem .85rem;background:var(--green);color:#fff;border:none;border-radius:var(--r);font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap}
+  .opt-add-row button:hover{background:var(--green-d)}
+  .opt-footer{display:flex;justify-content:flex-end;padding-top:.75rem;border-top:1px solid var(--g100);margin-top:.5rem}
+  .erow-time{width:100%;padding:.4rem .45rem;border:1px solid var(--g100);border-radius:var(--r);font-size:13px;font-family:var(--mono);color:var(--g900);background:var(--g50)}
+  .erow-time:focus{outline:none;border-color:var(--green);background:#fff}
+  .start-time-input{padding:.35rem .5rem;border:1px solid var(--g300);border-radius:var(--r);font-size:14px;font-family:var(--mono);font-weight:600;color:var(--g900);background:#fff;width:130px}
+  .start-time-input:focus{outline:none;border-color:var(--green)}
+  /* Clock picker */
+  .clock-picker-overlay{display:none;position:fixed;top:0;right:0;bottom:0;left:0;background:rgba(0,0,0,.45);z-index:600;align-items:center;justify-content:center}
+  .clock-box{background:#fff;padding:25px;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.2);width:300px;text-align:center}
+  .clock-box h2{margin-top:0;color:#222;font-size:16px;margin-bottom:12px}
+  .clock-live{font-size:28px;font-weight:700;margin:12px 0;color:#003366;letter-spacing:.04em}
+  .clock-box input[type=time]{width:100%;padding:12px;font-size:18px;border:1px solid #ccc;border-radius:8px;box-sizing:border-box;font-family:var(--mono)}
+  .clock-box input[type=time]:focus{outline:none;border-color:#003366}
+  .clock-confirm-btn{margin-top:12px;width:100%;padding:12px;background:#003366;color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;font-family:var(--sans)}
+  .clock-confirm-btn:hover{background:#0055a5}
+  .clock-cancel-btn{margin-top:8px;width:100%;padding:10px;background:#888;color:#fff;border:none;border-radius:8px;font-size:14px;cursor:pointer;font-family:var(--sans)}
+  .clock-cancel-btn:hover{background:#666}
+  .clock-now-btn{width:100%;padding:10px;background:#1D9E75;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;font-family:var(--sans);margin-bottom:10px}
+  .clock-now-btn:hover{background:#0F6E56}
+  .time-picker-btn{width:100%;padding:.4rem .45rem;border:1px solid var(--g100);border-radius:var(--r);font-size:13px;font-family:var(--mono);color:var(--g900);background:var(--g50);cursor:pointer;text-align:center;font-weight:600}
+  .time-picker-btn:hover{border-color:var(--green);background:#fff}
+  .start-time-picker-btn{padding:.35rem .5rem;border:1px solid var(--g300);border-radius:var(--r);font-size:14px;font-family:var(--mono);font-weight:600;color:var(--g900);background:#fff;cursor:pointer;width:130px}
+  .start-time-picker-btn.start-modified{background:#1A1A18;color:#fff;border-color:#1A1A18}
+  .start-note-display{font-size:11px;color:var(--g500);margin-top:.3rem;padding:.2rem .5rem;background:var(--amber-l);border-left:3px solid var(--amber);border-radius:0 var(--r) var(--r) 0;display:flex;align-items:center;gap:.4rem}
+  .start-note-display strong{color:var(--amber);}
+
+  /* ── AC Diagnostic Tool ── */
+  :root{--ac-bg:#0d1117;--ac-panel:#161b22;--ac-border:#30363d;--ac-orange:#f97316;--ac-orange-dim:#7c3a10;--ac-text:#e6edf3;--ac-muted:#8b949e;--ac-green:#3fb950;--ac-blue:#58a6ff;--ac-red:#f85149;}
+  .ac-tool{background:var(--ac-bg);color:var(--ac-text);font-family:'Barlow',sans-serif;padding:1.5rem;border-radius:12px;border:1px solid var(--ac-border)}
+  .ac-header{display:flex;align-items:center;gap:12px;margin-bottom:1.5rem;padding-bottom:1rem;border-bottom:1px solid var(--ac-border)}
+  .ac-logo{width:36px;height:36px;background:var(--ac-orange);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .ac-logo svg{width:20px;height:20px;fill:white}
+  .ac-title{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:700;letter-spacing:0.5px;color:var(--ac-text)}
+  .ac-subtitle{font-size:12px;color:var(--ac-muted);margin-top:2px;font-family:'Share Tech Mono',monospace}
+  .ac-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:1.5rem}
+  .ac-sensor{background:var(--ac-panel);border:1px solid var(--ac-border);border-radius:8px;padding:12px}
+  .ac-sensor-label{font-size:11px;color:var(--ac-muted);font-family:'Share Tech Mono',monospace;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px}
+  .ac-toggle{display:flex;border-radius:6px;overflow:hidden;border:1px solid var(--ac-border)}
+  .ac-toggle button{flex:1;padding:8px 4px;background:transparent;border:none;color:var(--ac-muted);font-size:12px;font-family:'Barlow Condensed',sans-serif;font-weight:600;letter-spacing:1px;cursor:pointer;transition:all 0.15s;-webkit-appearance:none;appearance:none}
+  .ac-toggle button.high.active{background:#7f1d1d;color:#fca5a5}
+  .ac-toggle button.low.active{background:#1e3a5f;color:#93c5fd}
+  .ac-toggle button:hover:not(.active){background:rgba(255,255,255,0.05)}
+  .ac-diagnose-btn{width:100%;padding:12px;background:var(--ac-orange);color:white;border:none;border-radius:8px;font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;letter-spacing:2px;cursor:pointer;transition:all 0.15s;margin-bottom:1rem;-webkit-appearance:none;appearance:none}
+  .ac-diagnose-btn:hover{background:#ea6a0a;transform:translateY(-1px)}
+  .ac-diagnose-btn:active{transform:translateY(0)}
+  .ac-reset-btn{background:transparent;border:1px solid var(--ac-border);color:var(--ac-muted);border-radius:6px;padding:6px 14px;font-size:12px;font-family:'Barlow',sans-serif;cursor:pointer;transition:all 0.15s;-webkit-appearance:none;appearance:none}
+  .ac-reset-btn:hover{border-color:var(--ac-muted);color:var(--ac-text)}
+  .ac-result-panel{background:var(--ac-panel);border:1px solid var(--ac-border);border-radius:8px;padding:1rem;display:none}
+  .ac-result-panel.show{display:block;animation:acFadeIn 0.2s ease}
+  @keyframes acFadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+  .ac-result-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px}
+  .ac-result-condition{font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:700;color:var(--ac-orange)}
+  .ac-result-match{font-size:11px;font-family:'Share Tech Mono',monospace;color:var(--ac-green);background:rgba(63,185,80,0.1);border:1px solid rgba(63,185,80,0.3);padding:3px 8px;border-radius:4px}
+  .ac-result-match.partial{color:#f0ab00;background:rgba(240,171,0,0.1);border-color:rgba(240,171,0,0.3)}
+  .ac-causes-label{font-size:11px;color:var(--ac-muted);font-family:'Share Tech Mono',monospace;letter-spacing:1px;margin-bottom:8px}
+  .ac-cause-item{display:flex;align-items:center;gap:8px;padding:7px 10px;background:rgba(255,255,255,0.03);border-radius:5px;margin-bottom:6px;font-size:13px;color:var(--ac-text)}
+  .ac-cause-dot{width:6px;height:6px;border-radius:50%;background:var(--ac-orange);flex-shrink:0}
+  .ac-multi-results{display:flex;flex-direction:column;gap:8px}
+  .ac-multi-card{background:rgba(255,255,255,0.03);border:1px solid var(--ac-border);border-radius:6px;padding:10px 12px;cursor:pointer;transition:border-color 0.15s}
+  .ac-multi-card:hover{border-color:var(--ac-orange)}
+  .ac-multi-name{font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:600;color:var(--ac-text)}
+  .ac-multi-score{font-size:11px;font-family:'Share Tech Mono',monospace;color:var(--ac-muted);margin-top:2px}
+  .ac-readings-bar{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:1rem}
+  .ac-reading-chip{font-family:'Share Tech Mono',monospace;font-size:10px;padding:3px 8px;border-radius:4px;border:1px solid}
+  .ac-reading-chip.high{color:#fca5a5;background:#7f1d1d22;border-color:#7f1d1d}
+  .ac-reading-chip.low{color:#93c5fd;background:#1e3a5f22;border-color:#1e3a5f}
+  .ac-detail-view{display:none}
+  .ac-detail-view.show{display:block;animation:acFadeIn 0.15s ease}
+  .ac-back-btn{background:transparent;border:none;color:var(--ac-blue);font-size:12px;cursor:pointer;font-family:'Barlow',sans-serif;padding:0;margin-bottom:12px;display:flex;align-items:center;gap:4px}
+  .ac-scan-line{height:1px;background:linear-gradient(90deg,transparent,var(--ac-orange),transparent);animation:acScan 2s ease-in-out infinite;margin:8px 0;opacity:0.4}
+  @keyframes acScan{0%,100%{opacity:0}50%{opacity:0.6}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="app-header">
+    <div style="display:flex;align-items:center;gap:.75rem">
+      <img src="data:image/jpeg;base64,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" alt="Reid Heating Cooling &amp; Indoor Air Quality" style="height:44px;width:auto;border-radius:4px">
+      <button id="back-btn" class="btn btn-o" style="display: none; font-size: 12px; padding: 0.35rem 0.85rem;" onclick="A.goBack()">← Change Period</button>
+      <div class="app-title">Tech <span>Timesheet</span></div>
+    </div>
+    <div style="display:flex;align-items:center;gap:.75rem">
+      <div id="tech-name-display" style="display: none; font-size: 14px; font-weight: 700; color: var(--green-d); background: var(--green-l); padding: 0.25rem 0.75rem; border-radius: 99px;">Colin 15555</div>
+      <div id="sync-status"></div>
+    </div>
+  </div>
+
+  <div class="card" id="setup-card">
+      <div class="card-title">Pay Period Setup</div>
+      <div class="setup-grid">
+        <div class="field">
+          <label>Technician</label>
+          <div style="padding:.5rem .7rem;border:1px solid var(--g100);border-radius:var(--r);font-size:14px;background:var(--g50);color:var(--g700);font-weight:600">Dave 64329</div>
+        </div>
+        <div class="field"><label>Pay Period Start</label><input type="date" id="period-start"></div>
+        <div><button class="btn btn-g" onclick="A.load()" style="width:100%;padding:.55rem">Load Timesheet</button></div>
+      </div>
+    </div>
+
+  <div id="ac-tool-card" style="margin-bottom: 1rem; display: block;">
+    <div class="ac-tool">
+      <div class="ac-header">
+        <div class="ac-logo">
+          <svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2zm0 2a8 8 0 1 1 0 16A8 8 0 0 1 12 4zm0 2v2m0 8v2M4 12H6m12 0h2m-3.17-4.83-1.42 1.42M7.59 16.41 6.17 17.83m0-11.66 1.42 1.42m8.82 8.82 1.42 1.42"></path></svg>
+        </div>
+        <div>
+          <div class="ac-title">AC DIAGNOSTIC SYSTEM</div>
+          <div class="ac-subtitle">// ENTER FIELD READINGS TO IDENTIFY FAULT</div>
+        </div>
+      </div>
+      <div class="ac-grid">
+        <div class="ac-sensor">
+          <div class="ac-sensor-label">Suction Pressure</div>
+          <div class="ac-toggle" data-key="suction">
+            <button class="high" onclick="AC.setReading('suction','high',this)">HIGH</button>
+            <button class="low" onclick="AC.setReading('suction','low',this)">LOW</button>
+          </div>
+        </div>
+        <div class="ac-sensor">
+          <div class="ac-sensor-label">Head Pressure</div>
+          <div class="ac-toggle" data-key="head">
+            <button class="high" onclick="AC.setReading('head','high',this)">HIGH</button>
+            <button class="low" onclick="AC.setReading('head','low',this)">LOW</button>
+          </div>
+        </div>
+        <div class="ac-sensor">
+          <div class="ac-sensor-label">Superheat</div>
+          <div class="ac-toggle" data-key="superheat">
+            <button class="high" onclick="AC.setReading('superheat','high',this)">HIGH</button>
+            <button class="low" onclick="AC.setReading('superheat','low',this)">LOW</button>
+          </div>
+        </div>
+        <div class="ac-sensor">
+          <div class="ac-sensor-label">Subcooling</div>
+          <div class="ac-toggle" data-key="subcooling">
+            <button class="high" onclick="AC.setReading('subcooling','high',this)">HIGH</button>
+            <button class="low" onclick="AC.setReading('subcooling','low',this)">LOW</button>
+          </div>
+        </div>
+        <div class="ac-sensor">
+          <div class="ac-sensor-label">Suction Line Temp</div>
+          <div class="ac-toggle" data-key="suction_temp">
+            <button class="high" onclick="AC.setReading('suction_temp','high',this)">HIGH</button>
+            <button class="low" onclick="AC.setReading('suction_temp','low',this)">LOW</button>
+          </div>
+        </div>
+        <div class="ac-sensor">
+          <div class="ac-sensor-label">Discharge Line Temp</div>
+          <div class="ac-toggle" data-key="discharge_temp">
+            <button class="high" onclick="AC.setReading('discharge_temp','high',this)">HIGH</button>
+            <button class="low" onclick="AC.setReading('discharge_temp','low',this)">LOW</button>
+          </div>
+        </div>
+      </div>
+      <button class="ac-diagnose-btn" onclick="AC.diagnose()">▶ RUN DIAGNOSTICS</button>
+      <div class="ac-result-panel" id="ac-result">
+        <div id="ac-result-inner"></div>
+      </div>
+    </div>
+  </div>
+
+
+  <div id="sheet-area" style="display: none;">
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.85rem">
+        <div class="card-title" id="period-title" style="margin-bottom:0">2026-05-04  →  2026-05-17</div>
+        <div id="cloud-status"><span class="csync csync-ok">☁ Saved to cloud</span></div>
+      </div>
+      <div class="week-label">Week 1</div>
+      <div class="day-tabs" id="tabs-w1"><button class="day-tab active " onclick="A.selectDay(0)"><span class="dn">Mon</span><span class="dd">4</span><span class="dh">—</span></button><button class="day-tab  " onclick="A.selectDay(1)"><span class="dn">Tue</span><span class="dd">5</span><span class="dh">—</span></button><button class="day-tab  " onclick="A.selectDay(2)"><span class="dn">Wed</span><span class="dd">6</span><span class="dh">—</span></button><button class="day-tab  " onclick="A.selectDay(3)"><span class="dn">Thu</span><span class="dd">7</span><span class="dh">—</span></button><button class="day-tab  " onclick="A.selectDay(4)"><span class="dn">Fri</span><span class="dd">8</span><span class="dh">—</span></button><button class="day-tab  " onclick="A.selectDay(5)"><span class="dn">Sat</span><span class="dd">9</span><span class="dh">—</span></button><button class="day-tab  " onclick="A.selectDay(6)"><span class="dn">Sun</span><span class="dd">10</span><span class="dh">—</span></button></div>
+      <div class="week-label">Week 2</div>
+      <div class="day-tabs" id="tabs-w2"><button class="day-tab  " onclick="A.selectDay(7)"><span class="dn">Mon</span><span class="dd">11</span><span class="dh">—</span></button><button class="day-tab  " onclick="A.selectDay(8)"><span class="dn">Tue</span><span class="dd">12</span><span class="dh">—</span></button><button class="day-tab  " onclick="A.selectDay(9)"><span class="dn">Wed</span><span class="dd">13</span><span class="dh">—</span></button><button class="day-tab  " onclick="A.selectDay(10)"><span class="dn">Thu</span><span class="dd">14</span><span class="dh">—</span></button><button class="day-tab  " onclick="A.selectDay(11)"><span class="dn">Fri</span><span class="dd">15</span><span class="dh">—</span></button><button class="day-tab  " onclick="A.selectDay(12)"><span class="dn">Sat</span><span class="dd">16</span><span class="dh">—</span></button><button class="day-tab  " onclick="A.selectDay(13)"><span class="dn">Sun</span><span class="dd">17</span><span class="dh">—</span></button></div>
+      <hr>
+      <div style="margin-bottom:.65rem;font-size:13px;font-weight:600;color:var(--g700)" id="day-label">Monday, May 4</div>
+      <div id="entry-list"><div class="start-row">
+      <label>Day Start</label>
+      <select onchange="A.setStartType('2026-05-04',this.value)" style="flex:1;min-width:0;padding:.35rem .45rem;border:1px solid var(--g300);border-radius:var(--r);font-size:13px;font-family:var(--sans);color:var(--g900);background:#fff">
+        <option value="">— Select —</option>
+        <option value="Office Pick up Parts">Office Pick up Parts</option><option value="Office Pick up Truck">Office Pick up Truck</option><option value="Office Pick up Equipment for Install">Office Pick up Equipment for Install</option><option value="First Call Start Time">First Call Start Time</option>
+      </select>
+      <button class="start-time-picker-btn" onclick="A.openClockPicker('2026-05-04',-1,'startTime','08:00')">—</button>
+      <select class="day-off-select" onchange="A.setDayOff('2026-05-04',this.value)" title="Mark day as no hours worked">
+        <option value="">Day Off ▾</option>
+        <option value="Booked Off">Booked Off</option>
+        <option value="No Work">No Work</option>
+      </select>
+    </div><div class="ehdr"><span>Type</span><span>Time In</span><span>Time Out</span><span>Client / Job Site</span><span>Job Description</span><span>Hours</span><span style="color:#C62828">Overtime</span><span></span></div><div class="gap-row" id="gap-0" style="display:none">
+        <div class="gline"></div><span class="glabel"></span>
+        <span class="ghrs"></span><div class="gline"></div>
+      </div><div class="erow">
+        <button class="ot-btn" onclick="A.toggleOT('2026-05-04',0)" title="Regular — click to switch to Overtime">Reg</button>
+        <button class="time-picker-btn" onclick="A.openClockPicker('2026-05-04',0,'timeIn','08:00')">—</button>
+        <button class="time-picker-btn" onclick="A.openClockPicker('2026-05-04',0,'timeOut','17:00')">—</button>
+        <input class="txt" type="text" placeholder="Client / site" value="" oninput="A.updateJob('2026-05-04',0,'client',this.value)">
+        <select onchange="A.updateJob('2026-05-04',0,'job',this.value)">
+          <option value="">— Select —</option>
+          <option value="Furnace Maintenance">Furnace Maintenance</option><option value="Air Conditioner Maintenance">Air Conditioner Maintenance</option><option value="Service Call">Service Call</option><option value="Warranty Call">Warranty Call</option><option value="Inspection">Inspection</option><option value="Pick up Part">Pick up Part</option><option value="Office">Office</option>
+        </select>
+        <div class="rhrs" id="rh-reg-0" title="" style="background: var(--green-l); color: var(--green-d);">—</div>
+        <div class="rhrs-ot dim" id="rh-ot-0" title="">—</div>
+        <div class="erow-actions">
+          <button class="rst" onclick="A.resetJobTimes('2026-05-04',0)" title="Reset hours to 0">↺</button>
+          <button class="del" onclick="A.removeJob('2026-05-04',0)" title="Remove">×</button>
+        </div>
+      </div>
+      <div class="jlimit-warn" id="jlimit-0" style="display:none">
+        <div style="display:flex;align-items:center;gap:.5rem;width:100%">
+          <span>⚠️</span>
+          <span><strong>This job</strong> has exceeded its time limit — <span class="jlimit-over"></span></span>
+        </div>
+        <div id="jlimit-status-0" style="font-size:12px;font-weight:700;margin-top:2px"></div>
+        <textarea class="jlimit-note" id="jlimit-note-0" placeholder="Add a note to explain the extra time…" oninput="A.updateJobNote('2026-05-04',0,this.value)"></textarea>
+      </div></div>
+      <button class="add-btn" onclick="A.addJob()">+ Add job</button>
+      <div style="text-align:right;margin-top:6px">
+        <button class="manage-link" onclick="A.openOptions()">⚙ Manage dropdown options</button>
+      </div>
+      <div class="day-footer">
+        <div class="dtotal">
+          Regular: <strong id="day-reg-total">0.00h</strong>
+          &nbsp;&nbsp;
+          <span style="color:#C62828">Overtime: <strong id="day-ot-total" style="color:#C62828">0.00h</strong></span>
+        </div>
+        <div class="acts">
+          <button class="btn btn-o" onclick="A.exportExcel()">Export Excel</button>
+          <button class="btn btn-g" id="sync-btn" onclick="A.syncDay()">Save Period to Sheet</button>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Pay Period Summary</div>
+      <div class="sbar" id="summary">
+      <div class="si"><div class="sl">Week 1 — Reg</div><div class="sv">0.00h</div></div>
+      <div class="si"><div class="sl" style="color:#C62828">Week 1 — OT</div><div class="sv" style="color:var(--g300)">0.00h</div></div>
+      <div class="si"><div class="sl">Week 2 — Reg</div><div class="sv">0.00h</div></div>
+      <div class="si"><div class="sl" style="color:#C62828">Week 2 — OT</div><div class="sv" style="color:var(--g300)">0.00h</div></div>
+      <div class="si"><div class="sl">Period — Reg</div><div class="sv">0.00h</div></div>
+      <div class="si"><div class="sl" style="color:#C62828">Period — OT</div><div class="sv" style="color:var(--g300)">0.00h</div></div></div>
+    </div>
+  </div>
+
+  <div id="stats-card" class="card" style="display: block;">
+    <div class="card-title">Call Tier Distribution — Rolling 3 Months</div>
+    <div id="stats-content"><div style="font-size:11px;color:var(--g500);margin-bottom:.85rem">Feb 7, 2026 — May 8, 2026 &nbsp;·&nbsp; <strong style="color:var(--g700)">0</strong> calls tracked</div><div style="margin-bottom:1rem">
+      <div style="font-size:12px;font-weight:700;color:var(--g700);margin-bottom:.5rem">All jobs</div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:7px">
+        <span style="font-size:12px;color:var(--g500);min-width:130px;flex-shrink:0">Target</span>
+        <div style="flex:1;background:var(--g100);border-radius:4px;height:14px;overflow:hidden">
+          <div style="width:0%;background:#C8E6C9;height:100%;border-radius:4px;transition:width .4s ease"></div>
+        </div>
+        <span style="font-size:12px;font-family:var(--mono);font-weight:700;color:#2E7D32;min-width:22px;text-align:right">0</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:7px">
+        <span style="font-size:12px;color:var(--g500);min-width:130px;flex-shrink:0">Yellow</span>
+        <div style="flex:1;background:var(--g100);border-radius:4px;height:14px;overflow:hidden">
+          <div style="width:0%;background:#FFF9C4;height:100%;border-radius:4px;transition:width .4s ease"></div>
+        </div>
+        <span style="font-size:12px;font-family:var(--mono);font-weight:700;color:#F9A825;min-width:22px;text-align:right">0</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:7px">
+        <span style="font-size:12px;color:var(--g500);min-width:130px;flex-shrink:0">Orange</span>
+        <div style="flex:1;background:var(--g100);border-radius:4px;height:14px;overflow:hidden">
+          <div style="width:0%;background:#FFCC80;height:100%;border-radius:4px;transition:width .4s ease"></div>
+        </div>
+        <span style="font-size:12px;font-family:var(--mono);font-weight:700;color:#E65100;min-width:22px;text-align:right">0</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:7px">
+        <span style="font-size:12px;color:var(--g500);min-width:130px;flex-shrink:0">Improvement Needed</span>
+        <div style="flex:1;background:var(--g100);border-radius:4px;height:14px;overflow:hidden">
+          <div style="width:0%;background:#FFCDD2;height:100%;border-radius:4px;transition:width .4s ease"></div>
+        </div>
+        <span style="font-size:12px;font-family:var(--mono);font-weight:700;color:#C62828;min-width:22px;text-align:right">0</span>
+      </div>
+    </div><div style="font-size:13px;color:var(--g500);font-style:italic;padding:.25rem 0">No tier data yet for this technician in the last 3 months.</div></div>
+  </div>
+
+</div>
+
+<!-- Start time change explanation modal -->
+<div class="pin-overlay" id="start-note-overlay">
+  <div class="pin-modal" style="width:320px">
+    <h3 id="start-note-title">⏰ Start Time Changed</h3>
+    <p id="start-note-subtitle" style="font-size:12px;color:var(--g500);margin-bottom:.75rem;line-height:1.5"></p>
+    <textarea id="start-note-input" placeholder="e.g. Emergency call, traffic delay, early client request…" style="width:100%;min-height:80px;padding:.55rem .6rem;border:1.5px solid var(--g300);border-radius:var(--r);font-size:13px;font-family:var(--sans);resize:vertical;margin-bottom:.75rem;color:var(--g900)" onkeydown="if(event.key==='Enter'&amp;&amp;event.ctrlKey)A.saveStartNote()"></textarea>
+    <div class="pin-row">
+      <button class="btn btn-o" style="flex:1" onclick="A.cancelStartNote()">Skip</button>
+      <button class="btn btn-g" style="flex:1" onclick="A.saveStartNote()">Save Note</button>
+    </div>
+  </div>
+</div>
+
+<!-- Reset Data modal -->
+<div class="pin-overlay" id="reset-overlay">
+  <div class="pin-modal" style="width:340px">
+    <h3>⚠️ Reset Data</h3>
+    <p style="font-size:12px;color:var(--g500);margin-bottom:.85rem;line-height:1.5">Choose what to clear. <strong style="color:var(--red)">This cannot be undone.</strong></p>
+    <div class="field" style="margin-bottom:.85rem;text-align:left">
+      <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--g500);margin-bottom:.3rem">Technician</label>
+      <select id="reset-tech-select" style="width:100%;padding:.5rem .7rem;border:1px solid var(--g300);border-radius:var(--r);font-size:14px;font-family:var(--sans);background:#fff;color:var(--g900)">
+        <option value="">— Select —</option>
+        <option value="__ALL__">⚠ All technicians</option>
+      </select>
+    </div>
+    <div class="pin-row">
+      <button class="btn btn-o" style="flex:1" onclick="A.closeResetModal()">Cancel</button>
+      <button class="btn" style="flex:1;background:var(--red);color:#fff" onclick="A.confirmReset()">Reset</button>
+    </div>
+  </div>
+</div>
+
+<!-- PIN modal -->
+<div class="pin-overlay" id="pin-overlay">
+  <div class="pin-modal">
+    <h3>🔒 Manager Access</h3>
+    <p>Enter your PIN to edit hour limits</p>
+    <input class="pin-input" id="pin-input" type="password" maxlength="8" placeholder="••••" onkeydown="if(event.key==='Enter')A.checkPin()">
+    <div class="pin-row">
+      <button class="btn btn-o" style="flex:1" onclick="A.closePinModal()">Cancel</button>
+      <button class="btn btn-g" style="flex:1" onclick="A.checkPin()">Unlock</button>
+    </div>
+  </div>
+</div>
+
+<!-- Clock picker modal -->
+<div class="clock-picker-overlay" id="clock-picker-overlay" onclick="A.closeClockPickerIfBg(event)">
+  <div class="clock-box">
+    <h2 id="clock-picker-title">Select Time</h2>
+    <div class="clock-live" id="clock-live">--:--:--</div>
+    <button class="clock-now-btn" onclick="A.stampNow()">⏱ Use Current Time</button>
+    <input type="time" id="clock-picker-input">
+    <button class="clock-confirm-btn" onclick="A.confirmClockPicker()">Confirm Time</button>
+    <button class="clock-cancel-btn" onclick="A.closeClockPicker()">Cancel</button>
+  </div>
+</div>
+
+
+
+
+<!-- Options modal -->
+<div class="opt-overlay" id="opt-overlay" onclick="A.closeOptionsIfBg(event)">
+  <div class="opt-modal" id="opt-modal">
+    <h2>Manage Dropdown Options</h2>
+    <div class="opt-section">
+      <h3>Job Description Options</h3>
+      <div class="opt-list" id="opt-job-list"></div>
+      <div class="opt-add-row">
+        <input type="text" id="opt-job-input" placeholder="New option name…" onkeydown="if(event.key==='Enter')A.addOption('job')">
+        <button onclick="A.addOption('job')">+ Add</button>
+      </div>
+    </div>
+    <div class="opt-section">
+      <h3>Day Start Type Options</h3>
+      <div class="opt-list" id="opt-start-list"></div>
+      <div class="opt-add-row" style="flex-wrap:wrap;gap:6px">
+        <input type="text" id="opt-start-input" placeholder="New option name…" style="flex:1;min-width:120px" onkeydown="if(event.key==='Enter')A.addOption('start')">
+        <div id="opt-start-time-wrap" style="display:none;align-items:center;gap:4px">
+          <span style="font-size:11px;color:var(--g500);white-space:nowrap">Default time:</span>
+          <input type="time" id="opt-start-time-input" value="08:00" style="padding:.38rem .45rem;border:1px solid var(--g300);border-radius:var(--r);font-size:13px;font-family:var(--mono);background:#fff">
+        </div>
+        <button onclick="A.addOption('start')">+ Add</button>
+      </div>
+    </div>
+    <div class="opt-section" id="max-hours-section">
+      <h3>Maximum Hours Per Pay Period</h3>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:.5rem">
+        <input type="number" id="max-hours-input" min="0" max="999" step="0.5" placeholder="e.g. 80" style="width:100px;padding:.4rem .6rem;border:1px solid var(--g300);border-radius:var(--r);font-size:14px;font-family:var(--mono)" oninput="A.setMaxHours(this.value)">
+        <span style="font-size:13px;color:var(--g500)">hours &nbsp;(leave blank for no limit)</span>
+      </div>
+      <p style="font-size:12px;color:var(--g500);line-height:1.5">If the technician's total hours exceed this amount, a warning will appear asking them to email the office to explain the extra time.</p>
+    </div>
+    <div class="opt-section" id="preset-levels-section" style="display:none">
+      <h3>Edit Preset Levels</h3>
+      <div id="preset-editor-list"></div>
+    </div>
+    <div id="settings-io-box" style="display:none;margin-top:.75rem;padding:.85rem;background:var(--g50);border:1px solid var(--g100);border-radius:var(--r)">
+      <div style="font-size:12px;font-weight:700;color:var(--g700);margin-bottom:.4rem" id="settings-io-label"></div>
+      <textarea id="settings-io-textarea" style="width:100%;height:100px;font-size:11px;font-family:var(--mono);padding:.4rem .5rem;border:1px solid var(--g300);border-radius:var(--r);resize:vertical;background:#fff;color:var(--g900)" placeholder="Paste settings code here…"></textarea>
+      <div style="display:flex;gap:.5rem;margin-top:.5rem">
+        <button class="btn btn-g" style="font-size:12px;padding:.35rem .85rem" onclick="A.applyImport()" id="settings-apply-btn">Apply</button>
+        <button class="btn btn-o" style="font-size:12px;padding:.35rem .85rem" onclick="A.closeSettingsIO()">Cancel</button>
+      </div>
+    </div>
+    <div class="opt-footer">
+      <div style="display:flex;gap:.5rem;flex:1">
+        <button class="btn btn-o" style="font-size:12px;padding:.35rem .85rem" onclick="A.exportSettings()" title="Copy settings to use on another device">↗ Export Settings</button>
+        <button class="btn btn-o" style="font-size:12px;padding:.35rem .85rem" onclick="A.importSettings()" title="Paste settings from another device">↙ Import Settings</button>
+      </div>
+      <button class="btn btn-g" onclick="A.closeOptions()">Done</button>
+    </div>
+  </div>
+</div>
+
+<div id="max-hours-banner" style="display:none;position:fixed;bottom:80px;left:50%;transform:translateX(-50%);z-index:200;width:calc(100% - 2rem);max-width:620px;background:#fff;border:2px solid #E53935;border-radius:12px;padding:1rem 1.25rem;box-shadow:0 4px 24px rgba(0,0,0,.18);align-items:flex-start;gap:.75rem">
+  <div style="font-size:22px;line-height:1">⚠️</div>
+  <div style="flex:1">
+    <div style="font-size:14px;font-weight:700;color:#B71C1C;margin-bottom:.3rem">Overtime — Office Notification Required</div>
+    <div style="font-size:13px;color:#444;line-height:1.55">Your total hours this pay period exceed the maximum of <strong id="max-hours-limit"></strong> by <strong id="max-hours-over"></strong>. Please send an email to the office explaining the extra time before submitting your timesheet.</div>
+  </div>
+</div>
+<div id="toast"></div>
+
+<script>
+// ╔════════════════════════════════════════════════════════════════════════╗
+// ║  UNIFIED GOOGLE APPS SCRIPT URL                                        ║
+// ║  This file shares a script + Google Sheet with Main_Office_Timesheet  ║
+// ║  Deploy TimesheetScript.gs once, then paste the /exec URL below        ║
+// ║  into BOTH this file and Main_Office_Timesheet.html.                  ║
+// ╚════════════════════════════════════════════════════════════════════════╝
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxYBxNdE005-2w9nceqRMx5F5-wxQlH2rv_7HQvNfCARwujP6Z_gZcIFwn9xl4moGUMzg/exec";
+
+const A = {
+  techName:"", periodStart:"", workdays:[], activeDay:0,
+  // data[date] = { startTime:"HH:MM", jobs:[{timeIn,timeOut,client,job}] }
+  data:{}, synced:{},
+  technicians:[], // loaded from localStorage
+  managerUnlocked:false,
+  MANAGER_PIN:"1234", // ← change this to your preferred PIN
+  // Tier presets — add L2/L3/L4 values when ready
+  TIER_PRESETS:[
+    {label:"L1", expected:1.5,   over1:2,      over2:2.5,    max:3},
+    {label:"L2", expected:80/60, over1:90/60,  over2:105/60, max:2},
+    {label:"L3", expected:70/60, over1:80/60,  over2:90/60,  max:105/60},
+    {label:"L4", expected:1,     over1:70/60,  over2:80/60,  max:90/60},
+  ],
+  // Default options (never removed)
+  defaultJobs:["Furnace Maintenance","Air Conditioner Maintenance","Service Call","Warranty Call","Inspection","Pick up Part","Office"],
+  defaultStartTypes:["Office Pick up Parts","Office Pick up Truck","Office Pick up Equipment for Install","First Call Start Time"],
+  // Custom options saved to localStorage
+  customOpts:{jobs:[],startTypes:[],removedJobs:[],removedStartTypes:[],maxHours:null,jobTiers:{},presets:{},startTypeTimes:{},startTypeNeedsTime:{}},
+
+  getWorkdays(s){
+    const r=[];const d=new Date(s+"T12:00:00");
+    for(let i=0;i<14;i++){const c=new Date(d);c.setDate(d.getDate()+i);r.push(c.toISOString().split("T")[0]);}
+    return r;
+  },
+  calcH(a,b){if(!a||!b)return 0;const[h1,m1]=a.split(":").map(Number),[h2,m2]=b.split(":").map(Number);return Math.max(0,((h2*60+m2)-(h1*60+m1))/60);},
+  toMins(t){if(!t)return 0;const[h,m]=t.split(":").map(Number);return h*60+m;},
+  fmtH(h){return h.toFixed(2)+"h";},
+  toAmPm(t){
+    if(!t)return"";
+    const[h,m]=t.split(":").map(Number);
+    const ampm=h>=12?"PM":"AM";
+    const hr=h%12||12;
+    return hr+":"+(m<10?"0"+m:m)+" "+ampm;
+  },
+  fmtDate(ds){return new Date(ds+"T12:00:00").toLocaleDateString("en-CA",{weekday:"long",month:"short",day:"numeric"});},
+  key(){return"ts|"+this.periodStart+"|"+this.techName;},
+  dayData(d){
+    const dd=this.data[d];
+    if(!dd)return{startTime:"",startType:"",jobs:[{timeIn:"",timeOut:"",client:"",job:""}]};
+    if(!Array.isArray(dd.jobs)||!dd.jobs.length)dd.jobs=[{timeIn:"",timeOut:"",client:"",job:""}];
+    return dd;
+  },
+  regH(d){
+    try{
+      const{startTime:st,jobs:js}=this.dayData(d);
+      let gh=0;
+      if(js&&js.length){
+        // Day start → first job: only count if first job is regular
+        if(st&&js[0]&&js[0].timeIn&&!js[0].ot)
+          gh+=this.calcH(st,js[0].timeIn);
+        // Between consecutive jobs: only count if BOTH are regular (non-OT)
+        for(let i=0;i<js.length-1;i++){
+          const cur=js[i],nxt=js[i+1];
+          if(cur&&nxt&&!cur.ot&&!nxt.ot&&cur.timeOut&&nxt.timeIn)
+            gh+=this.calcH(cur.timeOut,nxt.timeIn);
+        }
+      }
+      const jh=(js||[]).reduce((s,e)=>{
+        if(e&&e.ot)return s;
+        const h=this.calcH(e&&e.timeIn,e&&e.timeOut);
+        const{max}=this.getJobTiers(e&&e.job);
+        if(max!=null&&h>max&&!(e.note&&e.note.trim()))return s;
+        return s+h;
+      },0);
+      return gh+jh;
+    }catch(e){return 0;}
+  },
+  otH(d){
+    try{
+      return this.dayData(d).jobs.reduce((s,e)=>{
+        if(!e||!e.ot)return s;
+        const h=this.calcH(e&&e.timeIn,e&&e.timeOut);
+        const{max}=this.getJobTiers(e&&e.job);
+        if(max!=null&&h>max&&!(e.note&&e.note.trim()))return s;
+        return s+h*1.5+0.75;
+      },0);
+    }catch(e){return 0;}
+  },
+  gapH(d){
+    try{
+      const{startTime:st,jobs:js}=this.dayData(d);
+      if(!js||!js.length)return 0;
+      let t=0;
+      if(st&&js[0]&&js[0].timeIn)t+=this.calcH(st,js[0].timeIn);
+      for(let i=0;i<js.length-1;i++){
+        const cur=js[i],nxt=js[i+1];
+        if(cur&&nxt&&cur.timeOut&&nxt.timeIn)t+=this.calcH(cur.timeOut,nxt.timeIn);
+      }
+      return t;
+    }catch(e){return 0;}
+  },
+  dayTotal(d){return this.regH(d)+this.otH(d);},
+  // Save to localStorage instantly (for speed) then debounce a Drive save
+  save(){
+    try{localStorage.setItem(this.key(),JSON.stringify({data:this.data,synced:this.synced}));}catch(e){}
+    this.scheduleDriveSave();
+    this.scheduleStatsUpdate();
+  },
+  optsKey(){return"ts_custom_opts|"+(this.techName||"_global");},
+  saveOpts(){try{localStorage.setItem(this.optsKey(),JSON.stringify(this.customOpts));}catch(e){}},
+
+  scheduleDriveSave(){
+    clearTimeout(this._driveTimer);
+    this._driveTimer=setTimeout(()=>this.saveToDrive(),2000);
+    this.setCloudStatus("pending");
+  },
+
+  setCloudStatus(state){
+    const el=document.getElementById("cloud-status");
+    if(!el)return;
+    if(state==="pending") el.innerHTML='<span class="csync csync-saving">&#9729; Saving…</span>';
+    else if(state==="saved") el.innerHTML='<span class="csync csync-ok">&#9729; Saved to cloud</span>';
+    else if(state==="error") el.innerHTML='<span class="csync csync-err">&#9729; Cloud save failed (local copy kept)</span>';
+    else el.innerHTML="";
+  },
+
+  async saveToDrive(){
+    if(!SCRIPT_URL||SCRIPT_URL==="YOUR_APPS_SCRIPT_URL_HERE")return;
+    try{
+      await fetch(SCRIPT_URL,{
+        method:"POST",mode:"no-cors",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({
+          action:"save_draft",
+          techName:this.techName,
+          periodStart:this.periodStart,
+          data:this.data,
+          synced:this.synced,
+          customOpts:this.customOpts
+        })
+      });
+      this.setCloudStatus("saved");
+    }catch(e){this.setCloudStatus("error");}
+  },
+
+  async loadFromDrive(){
+    if(!SCRIPT_URL||SCRIPT_URL==="YOUR_APPS_SCRIPT_URL_HERE")return false;
+    try{
+      const url=SCRIPT_URL.replace("/exec","")
+        +"/exec?action=load_draft"
+        +"&tech="+encodeURIComponent(this.techName)
+        +"&period="+encodeURIComponent(this.periodStart);
+      const resp=await fetch(url,{redirect:"follow"});
+      if(!resp.ok)return false;
+      const json=await resp.json();
+      if(json&&json.found){
+        this.data=json.data||{};
+        this.synced=json.synced||{};
+        if(json.customOpts&&typeof json.customOpts==="object"){
+          this.customOpts={...this.customOpts,...json.customOpts};
+          try{localStorage.setItem(this.optsKey(),JSON.stringify(this.customOpts));}catch(e){}
+        }
+        try{localStorage.setItem(this.key(),JSON.stringify({data:this.data,synced:this.synced}));}catch(e){}
+        return true;
+      }
+    }catch(e){}
+    return false;
+  },
+
+  allJobs(){const removed=this.customOpts.removedJobs||[];return[...this.defaultJobs.filter(j=>!removed.includes(j)),...this.customOpts.jobs];},
+  allStartTypes(){const removed=this.customOpts.removedStartTypes||[];return[...this.defaultStartTypes.filter(t=>!removed.includes(t)),...this.customOpts.startTypes];},
+
+  async load(){
+    const name="Dave 64329";
+    const start=document.getElementById("period-start").value;
+    
+    if(!start){A.toast("Please select a pay period start date.","error");return;}
+    this.techName=name; this.periodStart=start; this.workdays=this.getWorkdays(start);
+
+    // Load from localStorage first (instant)
+    try{const s=localStorage.getItem(this.key());if(s){const p=JSON.parse(s);this.data=p.data||{};this.synced=p.synced||{};}else{this.data={};this.synced={};}}catch(e){this.data={};this.synced={};}
+    this.customOpts=JSON.parse(JSON.stringify({"jobs":[],"startTypes":[],"removedJobs":[],"removedStartTypes":[],"maxHours":null,"jobTiers":{},"presets":{},"startTypeTimes":{},"startTypeNeedsTime":{}}));
+    try{const co=localStorage.getItem(this.optsKey());if(co)this.customOpts=JSON.parse(co);}catch(e){}
+
+    this.activeDay=0;
+    document.getElementById("sheet-area").style.display="block";
+    document.getElementById("setup-card").style.display="none";
+    document.getElementById("ac-tool-card").style.display="none";
+    document.getElementById("period-title").textContent=this.workdays[0]+"  →  "+this.workdays[13];
+    // Show tech name badge and back button in header
+    const nameDisplay=document.getElementById("tech-name-display");
+    if(nameDisplay){nameDisplay.textContent=name;nameDisplay.style.display="block";}
+    const backBtn=document.getElementById("back-btn");
+    if(backBtn)backBtn.style.display="block";
+    this.renderTabs(); this.renderDay(); this.renderSummary(); this.updateStatus();
+
+    // Try to load fresher data from cloud draft
+    this.setCloudStatus("pending");
+    document.getElementById("cloud-status").innerHTML='<span class="csync csync-saving">&#9729; Loading from cloud…</span>';
+    const fromDrive=await this.loadFromDrive();
+    if(fromDrive){
+      this.renderTabs(); this.renderDay(); this.renderSummary();
+      this.setCloudStatus("saved");
+      this.toast("Data loaded from cloud.","success");
+    }else{
+      this.setCloudStatus(SCRIPT_URL&&SCRIPT_URL!=="YOUR_APPS_SCRIPT_URL_HERE"?"saved":"");
+    }
+    this.saveOpts(); // Ensure customOpts (jobTiers etc.) are in localStorage before stats graph reads them
+    this.renderStats();
+  },
+
+  goBack(){
+    document.getElementById("sheet-area").style.display="none";
+    document.getElementById("setup-card").style.display="block";
+    document.getElementById("ac-tool-card").style.display="block";
+    const nameDisplay=document.getElementById("tech-name-display");
+    if(nameDisplay)nameDisplay.style.display="none";
+    const backBtn=document.getElementById("back-btn");
+    if(backBtn)backBtn.style.display="none";
+    // Keep the tech name selected so they just need to pick a new period
+    const sel=document.getElementById("tech-name");
+    if(sel&&this.techName)sel.value=this.techName;
+  },
+
+  renderTabs(){
+    ["tabs-w1","tabs-w2"].forEach((id,wi)=>{
+      document.getElementById(id).innerHTML=this.workdays.slice(wi*7,wi*7+7).map((d,i)=>{
+        const idx=wi*7+i,h=this.dayTotal(d);
+        const off=this.data[d]&&this.data[d].dayOff||"";
+        const lbl=new Date(d+"T12:00:00").toLocaleDateString("en-CA",{weekday:"short"});
+        const num=new Date(d+"T12:00:00").getDate();
+        const cls=["day-tab",idx===this.activeDay?"active":"",off?"has-data":this.synced[d]?"synced":h>0?"has-data":""].join(" ");
+        const hl=off?"⛔ Off":this.synced[d]?"✓ "+this.fmtH(h):h>0?this.fmtH(h):"—";
+        return`<button class="${cls}" onclick="A.selectDay(${idx})"><span class="dn">${lbl}</span><span class="dd">${num}</span><span class="dh">${hl}</span></button>`;
+      }).join("");
+    });
+  },
+
+  selectDay(i){this.activeDay=i;this.renderTabs();this.renderDay();},
+
+  timeWidget(date,jobIdx,field,val){
+    const def=field==='timeOut'?'17:00':'08:00';
+    const v=val||def;                          // clock picker pre-fill default
+    const display=val?(this.toAmPm(val)||val):'—'; // show — until user sets a time
+    return `<button class="time-picker-btn" onclick="A.openClockPicker('${date}',${jobIdx},'${field}','${v}')">${display}</button>`;
+  },
+
+  startTimeWidget(date,val){
+    const v=val||'08:00';
+    const display=val?(this.toAmPm(val)||val):'—';
+    const dd=this.data[date];
+    const modified=dd&&dd.startTimeModified;
+    const cls=modified?'start-time-picker-btn start-modified':'start-time-picker-btn';
+    return `<button class="${cls}" onclick="A.openClockPicker('${date}',-1,'startTime','${v}')">${display}</button>`;
+  },
+
+  // Convert widget parts back to HH:MM
+  partsToTime(hPart,mPart,aPart){
+    let h=parseInt(hPart);
+    if(aPart==="PM"&&h!==12)h+=12;
+    if(aPart==="AM"&&h===12)h=0;
+    return String(h).padStart(2,"0")+":"+String(mPart).padStart(2,"0");
+  },
+
+  setJobTime(date,idx,field,val){
+    if(!val)return;
+    if(!this.data[date])this.data[date]={startTime:"",startType:"",jobs:[{timeIn:"08:00",timeOut:"17:00",client:"",job:""}]};
+    if(!Array.isArray(this.data[date].jobs))this.data[date].jobs=[{timeIn:"08:00",timeOut:"17:00",client:"",job:""}];
+    while(this.data[date].jobs.length<=idx)this.data[date].jobs.push({timeIn:"08:00",timeOut:"17:00",client:"",job:""});
+    const e=this.data[date].jobs[idx];
+    if(!e.timeIn)e.timeIn="08:00";
+    if(!e.timeOut)e.timeOut="17:00";
+    e[field]=val;
+    this.save();
+    this.renderDay();
+    this.renderTabs();
+    this.renderSummary();
+  },
+
+  // ── Clock picker ──
+  _clockCtx:null, _clockInterval:null,
+
+  openClockPicker(date,idx,field,currentVal){
+    this._clockCtx={date,idx,field};
+    const titles={timeIn:"Select Time In",timeOut:"Select Time Out",startTime:"Select Day Start Time"};
+    document.getElementById("clock-picker-title").textContent=titles[field]||"Select Time";
+    const inp=document.getElementById("clock-picker-input");
+    if(inp)inp.value=currentVal||(field==='timeOut'?'17:00':'08:00');
+    document.getElementById("clock-picker-overlay").style.display="flex";
+    // Start live clock
+    clearInterval(this._clockInterval);
+    const tick=()=>{
+      const now=new Date();
+      const el=document.getElementById("clock-live");
+      if(el)el.textContent=now.toLocaleTimeString();
+    };
+    tick();
+    this._clockInterval=setInterval(tick,1000);
+  },
+
+  confirmClockPicker(){
+    const val=document.getElementById("clock-picker-input").value;
+    if(!val){A.toast("Please select a time.","error");return;}
+    const{date,idx,field}=this._clockCtx;
+
+    // ── Overlap validation ──────────────────────────────────────
+    if(field==="timeIn"&&idx>0){
+      // timeIn of job N cannot be earlier than timeOut of job N-1
+      const jobs=(this.data[date]&&this.data[date].jobs)||[];
+      const prevOut=jobs[idx-1]&&jobs[idx-1].timeOut;
+      if(prevOut&&this.toMins(val)<this.toMins(prevOut)){
+        A.toast("Start time cannot be earlier than the previous call's end time ("+this.toAmPm(prevOut)+").","error");
+        return; // keep picker open so they can pick again
+      }
+    }
+    if(field==="timeOut"&&idx>=0){
+      // timeOut of job N cannot be later than timeIn of job N+1 (if it exists)
+      const jobs=(this.data[date]&&this.data[date].jobs)||[];
+      const nextIn=jobs[idx+1]&&jobs[idx+1].timeIn;
+      if(nextIn&&this.toMins(val)>this.toMins(nextIn)){
+        A.toast("End time cannot be later than the next call's start time ("+this.toAmPm(nextIn)+").","error");
+        return;
+      }
+      // Also timeOut cannot be earlier than this job's timeIn
+      const thisIn=jobs[idx]&&jobs[idx].timeIn;
+      if(thisIn&&this.toMins(val)<this.toMins(thisIn)){
+        A.toast("End time cannot be earlier than this call's start time ("+this.toAmPm(thisIn)+").","error");
+        return;
+      }
+    }
+    // ────────────────────────────────────────────────────────────
+
+    if(field==="startTime"){this.setStartTime(date,val);}
+    else{this.setJobTime(date,idx,field,val);}
+    this.closeClockPicker();
+  },
+
+  closeClockPicker(){
+    document.getElementById("clock-picker-overlay").style.display="none";
+    clearInterval(this._clockInterval);
+    this._clockInterval=null;
+  },
+
+  closeClockPickerIfBg(e){
+    if(e.target.id==="clock-picker-overlay")this.closeClockPicker();
+  },
+
+  stampNow(){
+    const now=new Date();
+    const hh=String(now.getHours()).padStart(2,"0");
+    const mm=String(now.getMinutes()).padStart(2,"0");
+    const inp=document.getElementById("clock-picker-input");
+    if(inp)inp.value=hh+":"+mm;
+  },
+
+  setStartTime(date,val){
+    if(!this.data[date])this.data[date]={startTime:"",startType:"",jobs:[{timeIn:"08:00",timeOut:"17:00",client:"",job:""}]};
+    this.data[date].startTime=val||"";
+    this.data[date].startTimeModified=true;
+    this.save();
+    this.updateGapsInPlace(date);
+    this.updateFooter(date);this.renderTabs();this.renderSummary();
+    // Re-render start row to show black button, then open explanation modal
+    this.renderDay();
+    this.openStartNoteModal(date);
+  },
+
+  // Update only the gap indicators without re-rendering the whole form
+  updateGapsInPlace(date){
+    const{startTime:st,jobs}=this.dayData(date);
+    jobs.forEach((e,idx)=>{
+      const gapEl=document.getElementById("gap-"+idx);
+      let gh=0,gl="";
+      if(idx===0&&st&&e.timeIn){gh=this.calcH(st,e.timeIn);gl="Travel to first call";}
+      else if(idx>0&&jobs[idx-1].timeOut&&e.timeIn){gh=this.calcH(jobs[idx-1].timeOut,e.timeIn);gl="Between calls";}
+      if(gapEl){
+        if(gh>0){
+          gapEl.style.display="flex";
+          const lbl=gapEl.querySelector(".glabel");
+          const hrs=gapEl.querySelector(".ghrs");
+          if(lbl)lbl.textContent=gl;
+          if(hrs)hrs.textContent=this.fmtH(gh);
+        }else{
+          gapEl.style.display="none";
+        }
+      }
+    });
+  },
+
+  renderDay(){
+    const date=this.workdays[this.activeDay];
+    document.getElementById("day-label").textContent=this.fmtDate(date);
+    const{startTime:st,jobs}=this.dayData(date);
+    let html="";
+
+    // Day Start row
+    const stType=this.dayData(date).startType||"";
+    const dayOff=this.data[date]&&this.data[date].dayOff||"";
+    html+=`<div class="start-row">
+      <label>Day Start</label>
+      <select onchange="A.setStartType('${date}',this.value)" style="flex:1;min-width:0;padding:.35rem .45rem;border:1px solid var(--g300);border-radius:var(--r);font-size:13px;font-family:var(--sans);color:var(--g900);background:#fff"${dayOff?' disabled':''}>
+        <option value="">— Select —</option>
+        ${A.allStartTypes().map(t=>`<option value="${t}"${stType===t?' selected':''}>${t}</option>`).join('')}
+      </select>
+      ${dayOff?'':this.startTimeWidget(date,st)}
+      <select class="day-off-select${dayOff?' is-off':''}" onchange="A.setDayOff('${date}',this.value)" title="Mark day as no hours worked">
+        <option value="">${dayOff?'✕ Clear':'Day Off ▾'}</option>
+        <option value="Booked Off"${dayOff==='Booked Off'?' selected':''}>Booked Off</option>
+        <option value="No Work"${dayOff==='No Work'?' selected':''}>No Work</option>
+      </select>
+    </div>`;
+    // Day-off banner
+    if(dayOff){
+      html+=`<div class="day-off-banner">⛔ ${dayOff} — 0 hours recorded for this day</div>`;
+    }
+    // Show explanation note if start time was manually modified
+    const startNote=this.data[date]&&this.data[date].startNote;
+    if(startNote){
+      html+=`<div class="start-note-display"><strong>📝</strong> ${startNote.replace(/</g,'&lt;')}</div>`;
+    }
+    // Show please-request note if this start type was added by a tech without a custom time
+    const needsTimeReq=stType&&(this.customOpts.startTypeNeedsTime||{})[stType];
+    if(needsTimeReq){
+      html+=`<div class="start-note-display" style="background:#E8F5E9;border-left-color:#43A047"><strong style="color:#2E7D32">📋</strong> <span style="color:#1B5E20">Please request new customer start time</span></div>`;
+    }
+
+    // Column headers
+    html+=`<div class="ehdr"><span>Type</span><span>Time In</span><span>Time Out</span><span>Client / Job Site</span><span>Job Description</span><span>Hours</span><span style="color:#C62828">Overtime</span><span></span></div>`;
+
+    // Jobs with gaps
+    jobs.forEach((e,idx)=>{
+      let gh=0,gl="";
+      if(idx===0&&st&&e.timeIn){gh=this.calcH(st,e.timeIn);gl="Travel to first call";}
+      else if(idx>0&&jobs[idx-1].timeOut&&e.timeIn){gh=this.calcH(jobs[idx-1].timeOut,e.timeIn);gl="Between calls";}
+      // Gap row always in DOM (hidden when gh=0) so we can update it in-place
+      html+=`<div class="gap-row" id="gap-${idx}" style="${gh>0?'':'display:none'}">
+        <div class="gline"></div><span class="glabel">${gl}</span>
+        <span class="ghrs">${gh>0?this.fmtH(gh):''}</span><div class="gline"></div>
+      </div>`;
+      const h=this.calcH(e.timeIn,e.timeOut);
+      const isOt=!!e.ot;
+      const effectiveH=isOt?h*1.5+0.75:h;
+      html+=`<div class="erow">
+        <button class="ot-btn${isOt?' is-ot':''}" onclick="A.toggleOT('${date}',${idx})" title="${isOt?'Overtime (×1.5 + 0.75h drive @ OT) — click to switch to Regular':'Regular — click to switch to Overtime'}">${isOt?'⚡ OT':'Reg'}</button>
+        ${this.timeWidget(date,idx,'timeIn',e.timeIn)}
+        ${this.timeWidget(date,idx,'timeOut',e.timeOut)}
+        <input class="txt" type="text" placeholder="Client / site" value="${e.client||""}" oninput="A.updateJob('${date}',${idx},'client',this.value)">
+        <select onchange="A.updateJob('${date}',${idx},'job',this.value)">
+          <option value="">— Select —</option>
+          ${A.allJobs().map(j=>`<option value="${j}"${e.job===j?' selected':''}>${j}</option>`).join('')}
+        </select>
+        <div class="rhrs${isOt?' dim':''}" id="rh-reg-${idx}">${isOt?'—':h>0?this.fmtH(h):'—'}</div>
+        <div class="rhrs-ot${isOt?'':' dim'}" id="rh-ot-${idx}">${isOt&&effectiveH>0?this.fmtH(effectiveH):'—'}</div>
+        <div class="erow-actions">
+          <button class="rst" onclick="A.resetJobTimes('${date}',${idx})" title="Reset hours to 0">↺</button>
+          <button class="del" onclick="A.removeJob('${date}',${idx})" title="Remove">×</button>
+        </div>
+      </div>
+      <div class="jlimit-warn" id="jlimit-${idx}" style="display:none">
+        <div style="display:flex;align-items:center;gap:.5rem;width:100%">
+          <span>⚠️</span>
+          <span><strong>${e.job||"This job"}</strong> has exceeded its time limit — <span class="jlimit-over"></span></span>
+        </div>
+        <div id="jlimit-status-${idx}" style="font-size:12px;font-weight:700;margin-top:2px"></div>
+        <textarea class="jlimit-note" id="jlimit-note-${idx}" placeholder="Add a note to explain the extra time…" oninput="A.updateJobNote('${date}',${idx},this.value)">${e.note||""}</textarea>
+      </div>`;
+    });
+
+    document.getElementById("entry-list").innerHTML=html;
+    this.updateFooter(date);
+    this.checkJobLimits();
+  },
+
+  updateFooter(date){
+    const reg=this.regH(date),ot=this.otH(date);
+    const regEl=document.getElementById("day-reg-total");
+    const otEl=document.getElementById("day-ot-total");
+    if(regEl)regEl.textContent=this.fmtH(reg);
+    if(otEl)otEl.textContent=this.fmtH(ot);
+    const btn=document.getElementById("sync-btn");
+    btn.textContent="Save Period to Sheet";
+    btn.disabled=false;
+    this.checkMaxHours();
+  },
+
+  periodTotal(){return this.workdays.reduce((s,d)=>s+this.dayTotal(d),0);},
+
+  checkMaxHours(){
+    const max=this.customOpts.maxHours;
+    const banner=document.getElementById("max-hours-banner");
+    if(!banner)return;
+    if(!max||isNaN(parseFloat(max))){banner.style.display="none";return;}
+    const tot=this.periodTotal();
+    if(tot>parseFloat(max)){
+      banner.style.display="flex";
+      document.getElementById("max-hours-over").textContent=this.fmtH(tot-parseFloat(max));
+      document.getElementById("max-hours-limit").textContent=this.fmtH(parseFloat(max));
+    } else {
+      banner.style.display="none";
+    }
+  },
+
+  setStart(date,val){
+    if(!this.data[date])this.data[date]={startTime:"",startType:"",jobs:[{timeIn:"",timeOut:"",client:"",job:""}]};
+    this.data[date].startTime=val; this.save();
+    this.updateGapsInPlace(date); this.renderTabs(); this.renderSummary();
+  },
+
+  setStartTypeTime(typeName,val){
+    if(!this.customOpts.startTypeTimes)this.customOpts.startTypeTimes={};
+    this.customOpts.startTypeTimes[typeName]=val||"08:00";
+    // Once a manager sets the time, clear the needs-request flag
+    if(!this.customOpts.startTypeNeedsTime)this.customOpts.startTypeNeedsTime={};
+    this.customOpts.startTypeNeedsTime[typeName]=false;
+    this.saveOpts();
+    this.renderOptionLists();
+    this.toast(`Start time for "${typeName}" set to ${this.toAmPm(val)}`,"success");
+  },
+
+  setStartType(date,val){
+    if(!this.data[date])this.data[date]={startTime:"",startType:"",jobs:[{timeIn:"08:00",timeOut:"17:00",client:"",job:""}]};
+    this.data[date].startType=val;
+    // Always apply the correct time for the chosen type
+    const customTime=(this.customOpts.startTypeTimes||{})[val];
+    if(customTime){
+      this.data[date].startTime=customTime;
+    } else if(val==="Office Pick up Truck"){
+      this.data[date].startTime="07:30";
+    } else if(val){
+      this.data[date].startTime="08:00";
+    }
+    // Auto-setting clears the manual-override flag and note
+    this.data[date].startTimeModified=false;
+    this.data[date].startNote="";
+    this.save();
+    this.renderDay();
+  },
+
+  updateJob(date,idx,field,val){
+    if(!this.data[date])this.data[date]={startTime:"",jobs:[{timeIn:"08:00",timeOut:"17:00",client:"",job:""}]};
+    if(!Array.isArray(this.data[date].jobs))this.data[date].jobs=[{timeIn:"08:00",timeOut:"17:00",client:"",job:""}];
+    while(this.data[date].jobs.length<=idx)this.data[date].jobs.push({timeIn:"08:00",timeOut:"17:00",client:"",job:""});
+    const base=this.data[date].jobs[idx]||{};
+    if(!base.timeIn)base.timeIn="08:00";
+    if(!base.timeOut)base.timeOut="17:00";
+    this.data[date].jobs[idx]={...base,[field]:val}; this.save();
+    const e=this.data[date].jobs[idx];
+    const h=this.calcH(e.timeIn,e.timeOut);
+    const isOt=!!e.ot;
+    const effectiveH=isOt?h*1.5+0.75:h;
+    const regEl=document.getElementById("rh-reg-"+idx);
+    const otEl=document.getElementById("rh-ot-"+idx);
+    if(regEl){regEl.textContent=isOt?'—':h>0?this.fmtH(h):'—';regEl.className=isOt?'rhrs dim':'rhrs';}
+    if(otEl){otEl.textContent=isOt&&effectiveH>0?this.fmtH(effectiveH):'—';otEl.className=isOt?'rhrs-ot':'rhrs-ot dim';}
+    // Never re-render on time changes — time widgets handle themselves
+    this.updateFooter(date); this.renderTabs(); this.renderSummary();
+    this.checkJobLimits();
+  },
+
+  toggleOT(date,idx){
+    if(!this.data[date]||!Array.isArray(this.data[date].jobs)||!this.data[date].jobs[idx])return;
+    this.data[date].jobs[idx].ot=!this.data[date].jobs[idx].ot;
+    this.save();
+    this.renderDay();
+    this.renderTabs();
+    this.renderSummary();
+  },
+
+  addJob(){
+    const date=this.workdays[this.activeDay];
+    if(!this.data[date])this.data[date]={startTime:"",jobs:[]};
+    const jobs=this.data[date].jobs;
+    // Default timeIn = next full hour after last job's timeOut
+    let nextIn="08:00",nextOut="17:00";
+    if(jobs.length>0){
+      const lastOut=jobs[jobs.length-1].timeOut;
+      if(lastOut){
+        const[h,m]=lastOut.split(":").map(Number);
+        const nextH=m>0?h+1:h; // next full hour (or same if already on the hour)
+        nextIn=String(Math.min(nextH,23)).padStart(2,"0")+":00";
+        nextOut=String(Math.min(nextH+1,23)).padStart(2,"0")+":00";
+      }
+    }
+    this.data[date].jobs.push({timeIn:nextIn,timeOut:nextOut,client:"",job:""});
+    this.save(); this.renderDay();
+  },
+
+  removeJob(date,idx){
+    if(!this.data[date])return;
+    this.data[date].jobs=this.data[date].jobs.filter((_,i)=>i!==idx);
+    if(!this.data[date].jobs.length)this.data[date].jobs=[{timeIn:"08:00",timeOut:"17:00",client:"",job:""}];
+    this.save(); this.renderDay(); this.renderTabs(); this.renderSummary();
+  },
+
+  renderSummary(){
+    const w1reg=this.workdays.slice(0,7).reduce((s,d)=>s+this.regH(d),0);
+    const w1ot =this.workdays.slice(0,7).reduce((s,d)=>s+this.otH(d),0);
+    const w2reg=this.workdays.slice(7,14).reduce((s,d)=>s+this.regH(d),0);
+    const w2ot =this.workdays.slice(7,14).reduce((s,d)=>s+this.otH(d),0);
+    const preg=w1reg+w2reg, pot=w1ot+w2ot;
+    const ots=(v)=>v>0?`style="color:#C62828"`:`style="color:var(--g300)"`;
+    document.getElementById("summary").innerHTML=`
+      <div class="si"><div class="sl">Week 1 — Reg</div><div class="sv">${this.fmtH(w1reg)}</div></div>
+      <div class="si"><div class="sl" style="color:#C62828">Week 1 — OT</div><div class="sv" ${ots(w1ot)}>${this.fmtH(w1ot)}</div></div>
+      <div class="si"><div class="sl">Week 2 — Reg</div><div class="sv">${this.fmtH(w2reg)}</div></div>
+      <div class="si"><div class="sl" style="color:#C62828">Week 2 — OT</div><div class="sv" ${ots(w2ot)}>${this.fmtH(w2ot)}</div></div>
+      <div class="si"><div class="sl">Period — Reg</div><div class="sv">${this.fmtH(preg)}</div></div>
+      <div class="si"><div class="sl" style="color:#C62828">Period — OT</div><div class="sv" ${ots(pot)}>${this.fmtH(pot)}</div></div>`;
+    this.checkMaxHours();
+  },
+
+  async syncDay(){
+    if(!SCRIPT_URL||SCRIPT_URL==="YOUR_APPS_SCRIPT_URL_HERE"){A.toast("⚠ No script URL set — paste it into the file first.","error");return;}
+    const hasAnyData=this.workdays.some(d=>{
+      if(this.data[d]&&this.data[d].dayOff)return true;
+      const{startTime:st,jobs}=this.dayData(d);return st||jobs.some(e=>e.timeIn||e.timeOut||e.client||e.job);
+    });
+    if(!hasAnyData){A.toast("No entries to save for this pay period.","info");return;}
+    const btn=document.getElementById("sync-btn");
+    btn.disabled=true; btn.innerHTML='<span class="spin"></span> Saving…';
+    const rows=[];
+    // Loop all 14 days — skip days with no data
+    this.workdays.forEach(date=>{
+      const dd=this.dayData(date);
+      const{startTime:st,jobs}=dd;
+      const dayOff=this.data[date]&&this.data[date].dayOff||"";
+      // Day-off row
+      if(dayOff){
+        const dn=new Date(date+"T12:00:00").toLocaleDateString("en-CA",{weekday:"long"});
+        rows.push([date,dn,this.techName,dayOff,"","",0,0,"","","","",""]);
+        return;
+      }
+      if(!st&&!jobs.some(e=>e.timeIn||e.timeOut||e.client||e.job))return;
+      const dn=new Date(date+"T12:00:00").toLocaleDateString("en-CA",{weekday:"long"});
+      const stype=dd.startType||"";
+      const startModified=this.data[date]&&this.data[date].startTimeModified;
+      const startNote=this.data[date]&&this.data[date].startNote||"";
+      const startSort=startModified?"B":"";
+      const needsTimeReq=stype&&(this.customOpts.startTypeNeedsTime||{})[stype];
+      const timeReqNote=needsTimeReq?"Please request new customer start time":"";
+      if(st||stype)rows.push([date,dn,this.techName,"Day Start"+(stype?" — "+stype:""),this.toAmPm(st),"","","","",startNote,startNote,startSort,timeReqNote]);
+      jobs.forEach((e,idx)=>{
+        // Only record drive time if BOTH surrounding jobs are regular (non-OT)
+        let gh=0,gl="";
+        if(idx===0&&st&&e.timeIn&&!e.ot){
+          gh=this.calcH(st,e.timeIn);gl="Travel to first call";
+        } else if(idx>0&&jobs[idx-1].timeOut&&e.timeIn){
+          const prev=jobs[idx-1];
+          if(!prev.ot&&!e.ot){gh=this.calcH(prev.timeOut,e.timeIn);gl="Between calls";}
+        }
+        if(gh>0)rows.push([date,dn,this.techName,gl,"","",parseFloat(gh.toFixed(2)),"","","","","",""]);
+        const h=this.calcH(e.timeIn,e.timeOut);
+        const effectiveH=e.ot?h*1.5+0.75:h;
+        const sortLetter=this.getTierLetter(h,e.job);
+        const typeLabel=e.ot?"Job (OT ×1.5 +0.75h drive)":"Job";
+        const regCol=e.ot?"":parseFloat(h.toFixed(2));
+        const otCol=e.ot?parseFloat(effectiveH.toFixed(2)):"";
+        rows.push([date,dn,this.techName,typeLabel,this.toAmPm(e.timeIn),this.toAmPm(e.timeOut),regCol,otCol,e.client||"",e.job||"",e.note||"",sortLetter,""]);
+      });
+    });
+    // Single period totals row at the end
+    const periodReg=this.workdays.reduce((s,d)=>s+this.regH(d),0);
+    const periodOt=this.workdays.reduce((s,d)=>s+this.otH(d),0);
+    rows.push(["","",this.techName,"Row Totals","","",parseFloat(periodReg.toFixed(2)),parseFloat(periodOt.toFixed(2)),"","","","",""]);
+    try{
+      await fetch(SCRIPT_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"submit_day",techName:this.techName,periodStart:this.periodStart,rows})});
+      // Mark every day that has data as synced
+      this.workdays.forEach(d=>{
+        const{startTime:st,jobs}=this.dayData(d);
+        const off=this.data[d]&&this.data[d].dayOff;
+        if(off||st||jobs.some(e=>e.timeIn||e.timeOut||e.client||e.job))this.synced[d]=true;
+      });
+      this.save(); this.renderTabs(); this.updateFooter(this.workdays[this.activeDay]);
+      A.toast("Pay period saved to Google Sheet!","success"); this.updateStatus();
+    }catch(err){A.toast("Network error — data saved locally.","error");btn.disabled=false;btn.textContent="Save Period to Sheet";}
+  },
+
+  onTechSelect(val){
+    if(val)this.renderStats(val);
+    else{const c=document.getElementById("stats-card");if(c)c.style.display="none";}
+  },
+
+  scheduleStatsUpdate(){
+    clearTimeout(this._statsTimer);
+    this._statsTimer=setTimeout(()=>this.renderStats(),600);
+  },
+
+  getRolling3MonthStats(techName){
+    const now=new Date();now.setHours(12,0,0,0);
+    const cutoff=new Date(now);cutoff.setDate(now.getDate()-90);
+    let opts={jobTiers:{}};
+    try{const co=localStorage.getItem("ts_custom_opts|"+techName);if(co)opts=JSON.parse(co);}catch(e){}
+    const jobTiers=opts.jobTiers||{};
+    const keys=Object.keys(localStorage).filter(k=>k.startsWith("ts|")&&k.endsWith("|"+techName));
+    const overall={expected:0,over1:0,over2:0,max:0};
+    const byJob={};
+    keys.forEach(key=>{
+      const parts=key.split("|");
+      if(parts.length<3)return;
+      const periodStart=new Date(parts[1]+"T12:00:00");
+      if(isNaN(periodStart)||periodStart<cutoff)return;
+      let stored;try{stored=JSON.parse(localStorage.getItem(key));}catch(e){return;}
+      if(!stored||!stored.data)return;
+      Object.values(stored.data).forEach(dayData=>{
+        if(!dayData||!Array.isArray(dayData.jobs))return;
+        dayData.jobs.forEach(job=>{
+          if(!job||!job.timeIn||!job.timeOut)return;
+          const h=this.calcH(job.timeIn,job.timeOut);
+          if(h<=0)return;
+          const jobName=job.job||"";
+          const tiers=jobTiers[jobName]||{};
+          const{expected,over1,over2,max}=tiers;
+          let cat;
+          if(max!=null&&h>max)cat="max";
+          else if(over2!=null&&h>over2)cat="over2";
+          else if(over1!=null&&h>over1)cat="over1";
+          else if(expected!=null)cat=h<=expected?"expected":"over1";
+          else return;
+          overall[cat]=(overall[cat]||0)+1;
+          if(jobName){
+            if(!byJob[jobName])byJob[jobName]={expected:0,over1:0,over2:0,max:0};
+            byJob[jobName][cat]=(byJob[jobName][cat]||0)+1;
+          }
+        });
+      });
+    });
+    return{overall,byJob,cutoff,now};
+  },
+
+  renderStats(techName){
+    techName=techName||this.techName;
+    const card=document.getElementById("stats-card");
+    if(!card)return;
+    if(!techName){card.style.display="none";return;}
+    card.style.display="block";
+    const{overall,byJob,cutoff,now}=this.getRolling3MonthStats(techName);
+    const total=overall.expected+overall.over1+overall.over2+overall.max;
+    const fmt=d=>d.toLocaleDateString("en-CA",{month:"short",day:"numeric",year:"numeric"});
+    const bar=(label,count,fill,textCol,maxCount)=>{
+      const pct=maxCount>0?Math.round((count/maxCount)*100):0;
+      return`<div style="display:flex;align-items:center;gap:10px;margin-bottom:7px">
+        <span style="font-size:12px;color:var(--g500);min-width:130px;flex-shrink:0">${label}</span>
+        <div style="flex:1;background:var(--g100);border-radius:4px;height:14px;overflow:hidden">
+          <div style="width:${pct}%;background:${fill};height:100%;border-radius:4px;transition:width .4s ease"></div>
+        </div>
+        <span style="font-size:12px;font-family:var(--mono);font-weight:700;color:${textCol};min-width:22px;text-align:right">${count}</span>
+      </div>`;
+    };
+    const maxAll=Math.max(overall.expected,overall.over1,overall.over2,overall.max,1);
+    let html=`<div style="font-size:11px;color:var(--g500);margin-bottom:.85rem">${fmt(cutoff)} — ${fmt(now)} &nbsp;·&nbsp; <strong style="color:var(--g700)">${total}</strong> call${total!==1?"s":""} tracked</div>`;
+    // Overall
+    html+=`<div style="margin-bottom:1rem">
+      <div style="font-size:12px;font-weight:700;color:var(--g700);margin-bottom:.5rem">All jobs</div>
+      ${bar("Target",overall.expected,"#C8E6C9","#2E7D32",maxAll)}
+      ${bar("Yellow",overall.over1,"#FFF9C4","#F9A825",maxAll)}
+      ${bar("Orange",overall.over2,"#FFCC80","#E65100",maxAll)}
+      ${bar("Improvement Needed",overall.max,"#FFCDD2","#C62828",maxAll)}
+    </div>`;
+    // By job type
+    const jobNames=Object.keys(byJob).filter(j=>{const d=byJob[j];return d.expected+d.over1+d.over2+d.max>0;});
+    if(jobNames.length){
+      html+=`<div style="border-top:1px solid var(--g100);padding-top:.85rem">
+        <div style="font-size:12px;font-weight:700;color:var(--g700);margin-bottom:.65rem">By job type</div>`;
+      jobNames.forEach(jn=>{
+        const jd=byJob[jn];
+        const jMax=Math.max(jd.expected,jd.over1,jd.over2,jd.max,1);
+        const jTotal=jd.expected+jd.over1+jd.over2+jd.max;
+        html+=`<div style="margin-bottom:.9rem">
+          <div style="font-size:12px;font-weight:700;color:var(--g700);margin-bottom:.35rem">${jn} <span style="font-weight:400;color:var(--g500)">(${jTotal})</span></div>
+          ${bar("Target",jd.expected,"#C8E6C9","#2E7D32",jMax)}
+          ${bar("Yellow",jd.over1,"#FFF9C4","#F9A825",jMax)}
+          ${bar("Orange",jd.over2,"#FFCC80","#E65100",jMax)}
+          ${bar("Improvement Needed",jd.max,"#FFCDD2","#C62828",jMax)}
+        </div>`;
+      });
+      html+=`</div>`;
+    }else if(total===0){
+      html+=`<div style="font-size:13px;color:var(--g500);font-style:italic;padding:.25rem 0">No tier data yet for this technician in the last 3 months.</div>`;
+    }
+    document.getElementById("stats-content").innerHTML=html;
+  },
+
+  updateStatus(){
+    const n=Object.values(this.synced).filter(Boolean).length;
+    document.getElementById("sync-status").innerHTML=n?`<span class="pill pill-g dot">${n} day${n>1?"s":""} synced</span>`:"";
+  },
+
+  exportExcel(){
+    if(!this.workdays.length){A.toast("Load a timesheet first.","info");return;}
+    const wb=XLSX.utils.book_new();
+    const fmtDate=ds=>new Date(ds+"T12:00:00").toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric",year:"numeric"});
+
+    // Cell builders
+    const s=(v,style={})=>({t:'s',v:String(v||""),s:style});
+    const n=(v,style={})=>({t:'n',v:parseFloat(v)||0,s:style});
+
+    // Style presets
+    const headerStyle={font:{bold:true},fill:{patternType:"solid",fgColor:{rgb:"D9E1F2"}}};
+    const sortColorStyle={G:{font:{bold:true},fill:{patternType:"solid",fgColor:{rgb:"C8E6C9"}}},
+                          Y:{font:{bold:true},fill:{patternType:"solid",fgColor:{rgb:"FFF9C4"}}},
+                          O:{font:{bold:true},fill:{patternType:"solid",fgColor:{rgb:"FFCC80"}}},
+                          R:{font:{bold:true},fill:{patternType:"solid",fgColor:{rgb:"FFCDD2"}}}};
+
+    const rows=[
+      [s("Technician"),s(this.techName)],
+      [s("Pay Period"),s(fmtDate(this.workdays[0])+" — "+fmtDate(this.workdays[13]))],
+      [],
+      [s("Date",headerStyle),s("Technician",headerStyle),s("Type",headerStyle),
+       s("Time In",headerStyle),s("Time Out",headerStyle),
+       s("Reg Hours",headerStyle),s("OT Hours",{font:{bold:true},fill:{patternType:"solid",fgColor:{rgb:"FFEBEE"}}}),
+       s("Client / Job Site",headerStyle),s("Job Description",headerStyle),
+       s("Note",headerStyle),s("Sort",headerStyle)]
+    ];
+
+    const otStyle={font:{bold:true,color:{rgb:"C62828"}},fill:{patternType:"solid",fgColor:{rgb:"FFEBEE"}}};
+    const subStyle={font:{italic:true},fill:{patternType:"solid",fgColor:{rgb:"F7F7F5"}}};
+    const otSubStyle={font:{italic:true,color:{rgb:"C62828"}},fill:{patternType:"solid",fgColor:{rgb:"FFEBEE"}}};
+    const boldGreenStyle={font:{bold:true,color:{rgb:"FFFFFF"}},fill:{patternType:"solid",fgColor:{rgb:"1D9E75"}}};
+    const boldRedStyle={font:{bold:true,color:{rgb:"FFFFFF"}},fill:{patternType:"solid",fgColor:{rgb:"C62828"}}};
+    // helper: empty OT cell
+    const emp=()=>s("");
+
+    let pregTot=0,potTot=0;
+    this.workdays.forEach(date=>{
+      const{startTime:st,jobs}=this.dayData(date);
+      const fullDate=s(fmtDate(date));
+      if(!st&&!jobs.some(e=>e.timeIn||e.timeOut||e.client||e.job))return;
+      const stype=(this.dayData(date)||{}).startType||"";
+      // Day Start row — 11 data cols
+      if(st||stype)rows.push([fullDate,s(this.techName),s("Day Start"+(stype?" — "+stype:"")),s(this.toAmPm(st)),emp(),emp(),emp(),emp(),emp(),emp(),emp()]);
+      let dregTot=0,dotTot=0;
+      jobs.forEach((e,idx)=>{
+        // Only count gap if BOTH surrounding jobs are regular
+        let gh=0,gl="";
+        if(idx===0&&st&&e.timeIn&&!e.ot){gh=this.calcH(st,e.timeIn);gl="Travel to first call";}
+        else if(idx>0&&jobs[idx-1].timeOut&&e.timeIn&&!jobs[idx-1].ot&&!e.ot){gh=this.calcH(jobs[idx-1].timeOut,e.timeIn);gl="Between calls";}
+        if(gh>0){
+          rows.push([fullDate,s(this.techName),s(gl),emp(),emp(),n(gh.toFixed(2)),emp(),emp(),emp(),emp(),emp()]);
+          dregTot+=gh;
+        }
+        const h=this.calcH(e.timeIn,e.timeOut);
+        const effectiveH=e.ot?h*1.5+0.75:h;
+        if(e.timeIn||e.timeOut||e.client||e.job){
+          const letter=this.getTierLetter(h,e.job);
+          const sortSt=sortColorStyle[letter]||{};
+          const typeLabel=e.ot?"Job (OT ×1.5 +0.75h drive)":"Job";
+          const regCell=e.ot?emp():n(h.toFixed(2),sortSt);
+          const otCell=e.ot?n(effectiveH.toFixed(2),otStyle):emp();
+          rows.push([fullDate,s(this.techName),s(typeLabel,e.ot?otStyle:{}),s(this.toAmPm(e.timeIn),e.ot?otStyle:{}),s(this.toAmPm(e.timeOut),e.ot?otStyle:{}),
+                     regCell,otCell,s(e.client||""),s(e.job||""),s(e.note||""),s(letter,sortSt)]);
+          if(e.ot)dotTot+=effectiveH; else dregTot+=h;
+        }
+      });
+      rows.push([emp(),emp(),emp(),emp(),s("Day Regular",subStyle),n(dregTot.toFixed(2),subStyle),emp(),emp(),emp(),emp(),emp()]);
+      rows.push([emp(),emp(),emp(),emp(),s("Day Overtime",otSubStyle),emp(),n(dotTot.toFixed(2),otSubStyle),emp(),emp(),emp(),emp()]);
+      pregTot+=dregTot; potTot+=dotTot;
+    });
+
+    rows.push([]);
+    rows.push([s("",boldGreenStyle),s("",boldGreenStyle),s("",boldGreenStyle),s("",boldGreenStyle),
+               s("Period Regular Hours",boldGreenStyle),n(pregTot.toFixed(2),boldGreenStyle),emp(),
+               s("",boldGreenStyle),s("",boldGreenStyle),s("",boldGreenStyle),s("",boldGreenStyle)]);
+    rows.push([s("",boldRedStyle),s("",boldRedStyle),s("",boldRedStyle),s("",boldRedStyle),
+               s("Period Overtime Hours",boldRedStyle),emp(),n(potTot.toFixed(2),boldRedStyle),
+               s("",boldRedStyle),s("",boldRedStyle),s("",boldRedStyle),s("",boldRedStyle)]);
+
+    const ws=XLSX.utils.aoa_to_sheet(rows);
+    ws["!cols"]=[{wch:28},{wch:18},{wch:24},{wch:12},{wch:12},{wch:8},{wch:8},{wch:24},{wch:28},{wch:32},{wch:6}];
+    XLSX.utils.book_append_sheet(wb,ws,(this.techName||"Tech").substring(0,31));
+    XLSX.writeFile(wb,"Timesheet_"+this.techName.replace(/\s+/g,"_")+"_"+this.periodStart+".xlsx");
+    A.toast("Excel file downloaded!","success");
+  },
+
+  // ── Technician management ──
+  loadTechs(){
+    try{const t=localStorage.getItem("ts_technicians");if(t)this.technicians=JSON.parse(t)||[];}catch(e){}
+    this.populateTechDropdown();
+  },
+
+  saveTechs(){
+    try{localStorage.setItem("ts_technicians",JSON.stringify(this.technicians));}catch(e){}
+  },
+
+  populateTechDropdown(){
+    const sel=document.getElementById("tech-name");
+    if(!sel)return;
+    const current=sel.value;
+    sel.innerHTML='<option value="">— Select technician —</option>';
+    this.technicians.forEach(n=>{
+      const o=document.createElement("option");
+      o.value=n; o.textContent=n;
+      if(n===current)o.selected=true;
+      sel.appendChild(o);
+    });
+    if(!this.technicians.length){
+      const o=document.createElement("option");
+      o.value=""; o.disabled=true;
+      o.textContent="No technicians added yet — click ⚙ Manage";
+      sel.appendChild(o);
+    }
+  },
+
+  openTechs(){
+    document.getElementById("tech-overlay").classList.add("open");
+    this.renderTechList();
+  },
+
+  closeTechs(){
+    document.getElementById("tech-overlay").classList.remove("open");
+    this.populateTechDropdown();
+  },
+
+  closeTechsIfBg(e){
+    if(e.target===document.getElementById("tech-overlay"))this.closeTechs();
+  },
+
+  renderTechList(){
+    const el=document.getElementById("tech-list");
+    if(!this.technicians.length){
+      el.innerHTML='<div class="no-techs">No technicians added yet.</div>';
+      return;
+    }
+    el.innerHTML=this.technicians.map((n,i)=>
+      `<div class="opt-item">
+        <span style="flex:1">${n}</span>
+        <button class="dl-tech-btn" onclick="A.generateTechFile('${n.replace(/'/g,"\\'")}')">&#8681; Download File</button>
+        <button class="rm-btn" onclick="A.removeTech(${i})" title="Remove" style="margin-left:6px">×</button>
+      </div>`
+    ).join("");
+  },
+
+  addTech(){
+    const val=document.getElementById("tech-input").value.trim();
+    if(!val){this.toast("Please enter a name.","error");return;}
+    if(this.technicians.some(n=>n.toLowerCase()===val.toLowerCase())){
+      this.toast("That name already exists.","error");return;
+    }
+    this.technicians.push(val);
+    this.saveTechs();
+    document.getElementById("tech-input").value="";
+    this.renderTechList();
+    this.toast('"'+val+'" added!','success');
+  },
+
+  removeTech(idx){
+    const name=this.technicians[idx];
+    if(!confirm('Remove "'+name+'" from the technician list?'))return;
+    this.technicians.splice(idx,1);
+    this.saveTechs();
+    this.renderTechList();
+  },
+
+  generateTechFile(techName){
+    // Grab the current page source and personalise it for one tech
+    let src = document.documentElement.outerHTML;
+
+    // Replace the dropdown setup block with a locked name display
+    const dropdownBlock = document.getElementById("setup-card").outerHTML;
+    const lockedBlock = `<div class="card" id="setup-card">
+      <div class="card-title">Pay Period Setup</div>
+      <div class="setup-grid">
+        <div class="field">
+          <label>Technician</label>
+          <div style="padding:.5rem .7rem;border:1px solid var(--g100);border-radius:var(--r);font-size:14px;background:var(--g50);color:var(--g700);font-weight:600">${techName}</div>
+        </div>
+        <div class="field"><label>Pay Period Start</label><input type="date" id="period-start"></div>
+        <div><button class="btn btn-g" onclick="A.load()" style="width:100%;padding:.55rem">Load Timesheet</button></div>
+      </div>
+    </div>`;
+    src = src.replace(dropdownBlock, lockedBlock);
+
+    // Remove the tech management modal entirely
+    const techOverlay = document.getElementById("tech-overlay").outerHTML;
+    src = src.replace(techOverlay, "");
+
+    // Hardcode tech name and skip dropdown validation in JS
+    src = src.replace(
+      "const name=document.getElementById(\"tech-name\").value.trim();",
+      `const name="${techName}";`
+    );
+    src = src.replace(
+      "if(!name){A.toast(\"Please select a technician name.\",\"error\");return;}\n    if(!this.technicians.includes(name)){A.toast(\"That technician is not in the list.\",\"error\");return;}",
+      ""
+    );
+
+    // Auto-set period start to April 6 default (already done via DOMContentLoaded)
+    // Remove loadTechs call since there's no dropdown to populate
+    src = src.replace("", "");
+
+    // Embed current customOpts so the tech file has all settings pre-loaded
+    const optsSnapshot=JSON.stringify(this.customOpts||{});
+    src = src.replace(
+      "this.customOpts={jobs:[],startTypes:[],removedJobs:[],removedStartTypes:[],maxHours:null,jobTiers:{},presets:{},startTypeTimes:{},startTypeNeedsTime:{}};",
+      `this.customOpts=JSON.parse(JSON.stringify(${optsSnapshot}));`
+    );
+
+    // Strip any live toast message so generated files don't open with a stale notification
+    src = src.replace(/<div id="toast"[^>]*>.*?<\/div>/, '<div id="toast"></div>');
+
+    // Download as a named file
+    const blob = new Blob([src], {type:"text/html"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "Timesheet_" + techName.replace(/\s+/g,"_") + ".html";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    this.toast("Downloaded timesheet for " + techName,"success");
+  },
+
+  exportSettings(){
+    const json=JSON.stringify(this.customOpts||{},null,2);
+    const ta=document.getElementById("settings-io-textarea");
+    const box=document.getElementById("settings-io-box");
+    if(ta)ta.value=json;
+    if(box){box.dataset.mode="export";box.style.display="block";}
+    document.getElementById("settings-io-label").textContent="Copy this code and paste it on your other device:";
+    const applyBtn=document.getElementById("settings-apply-btn");
+    if(applyBtn)applyBtn.style.display="none";
+  },
+
+  importSettings(){
+    const box=document.getElementById("settings-io-box");
+    const ta=document.getElementById("settings-io-textarea");
+    if(ta)ta.value="";
+    if(box){box.dataset.mode="import";box.style.display="block";}
+    document.getElementById("settings-io-label").textContent="Paste your settings code here, then click Apply:";
+    const applyBtn=document.getElementById("settings-apply-btn");
+    if(applyBtn)applyBtn.style.display="";
+  },
+
+  applyImport(){
+    const ta=document.getElementById("settings-io-textarea");
+    if(!ta||!ta.value.trim()){this.toast("Nothing to import.","error");return;}
+    try{
+      const parsed=JSON.parse(ta.value.trim());
+      this.customOpts={...this.customOpts,...parsed};
+      this.saveOpts();
+      document.getElementById("settings-io-box").style.display="none";
+      this.renderOptionLists();
+      this.toast("Settings imported successfully!","success");
+    }catch(e){this.toast("Invalid settings code — please check and try again.","error");}
+  },
+
+  closeSettingsIO(){
+    const box=document.getElementById("settings-io-box");
+    if(box)box.style.display="none";
+  },
+
+  // ── PIN / Manager unlock ──
+  openPinModal(){
+    document.getElementById("pin-overlay").classList.add("open");
+    setTimeout(()=>{const i=document.getElementById("pin-input");if(i){i.value="";i.focus();}},50);
+  },
+
+  closePinModal(){
+    document.getElementById("pin-overlay").classList.remove("open");
+  },
+
+  checkPin(){
+    const inp=document.getElementById("pin-input");
+    if(!inp)return;
+    if(inp.value===this.MANAGER_PIN){
+      this.managerUnlocked=true;
+      this.closePinModal();
+      this.renderOptionLists(); // re-render with inputs enabled
+    } else {
+      inp.classList.add("pin-error");
+      inp.value="";
+      setTimeout(()=>inp.classList.remove("pin-error"),400);
+    }
+  },
+
+  lockManager(){
+    this.managerUnlocked=false;
+    this.renderOptionLists();
+  },
+
+  getEffectivePreset(label){
+    const base=this.TIER_PRESETS.find(p=>p.label===label)||{label,expected:null,over1:null,over2:null,max:null};
+    const custom=(this.customOpts.presets||{})[label]||{};
+    return{expected:null,over1:null,over2:null,max:null,...base,...custom};
+  },
+
+  setPresetTierHM(label,tier,hStr,mStr){
+    if(!this.customOpts.presets)this.customOpts.presets={};
+    if(!this.customOpts.presets[label])this.customOpts.presets[label]={};
+    if(hStr===""||hStr===null){
+      delete this.customOpts.presets[label][tier];
+    }else{
+      this.customOpts.presets[label][tier]=parseInt(hStr||0)+(parseInt(mStr||0)/60);
+    }
+    this.saveOpts();
+    this.toast(label+" updated","success");
+  },
+
+  applyTierPreset(jobName,label){
+    const preset=this.getEffectivePreset(label);
+    if(!preset)return;
+    if(!this.customOpts.jobTiers)this.customOpts.jobTiers={};
+    if(!this.customOpts.jobTiers[jobName])this.customOpts.jobTiers[jobName]={};
+    ["expected","over1","over2","max"].forEach(tier=>{
+      if(preset[tier]!=null)this.customOpts.jobTiers[jobName][tier]=preset[tier];
+      else delete this.customOpts.jobTiers[jobName][tier];
+    });
+    this.saveOpts();
+    this.renderOptionLists();
+    this.checkJobLimits();
+    this.toast('"'+jobName+'" set to '+label,'success');
+  },
+
+  setTierHM(jobName,tier,hStr,mStr){
+    if(hStr===""||hStr===null){
+      if(this.customOpts.jobTiers&&this.customOpts.jobTiers[jobName])
+        delete this.customOpts.jobTiers[jobName][tier];
+      this.saveOpts();this.checkJobLimits();return;
+    }
+    const val=parseInt(hStr||0)+(parseInt(mStr||0)/60);
+    this.setJobTier(jobName,tier,String(val));
+  },
+
+  setJobTier(jobName,tier,val){
+    if(!this.customOpts.jobTiers)this.customOpts.jobTiers={};
+    if(!this.customOpts.jobTiers[jobName])this.customOpts.jobTiers[jobName]={};
+    const parsed=val===""||isNaN(parseFloat(val))?null:parseFloat(val);
+    if(parsed===null)delete this.customOpts.jobTiers[jobName][tier];
+    else this.customOpts.jobTiers[jobName][tier]=parsed;
+    this.saveOpts();
+    this.checkJobLimits();
+  },
+
+  getJobTiers(jobName){
+    const tiers=this.customOpts.jobTiers||{};
+    return tiers[jobName]||{};
+  },
+
+  // Return {color, label} based on hours vs tiers
+  getHoursTier(h,tiers){
+    if(!h||h<=0)return{color:"",label:""};
+    const{expected,over1,over2,max}=tiers;
+    if(max!=null&&h>max)    return{color:"#FFCDD2",text:"#B71C1C",label:"Improvement Needed"};
+    if(over2!=null&&h>over2) return{color:"#FFCC80",text:"#BF360C",label:"Orange"};
+    if(over1!=null&&h>over1) return{color:"#FFF9C4",text:"#7A5700",label:"Yellow"};
+    if(expected!=null&&h<=expected) return{color:"#C8E6C9",text:"#1B5E20",label:"Target"};
+    if(expected!=null&&h>expected)  return{color:"#FFF9C4",text:"#7A5700",label:"Yellow"};
+    return{color:"",label:""};
+  },
+
+  _startNoteDate:null,
+
+  openStartNoteModal(date){
+    this._startNoteDate=date;
+    const dd=this.data[date]||{};
+    const inp=document.getElementById("start-note-input");
+    if(inp)inp.value=dd.startNote||"";
+    // Build title — tell the tech if the change was earlier or later than default
+    const defaultTime=dd.startType==="Office Pick up Truck"?"07:30":"08:00";
+    const newTime=dd.startTime||"";
+    const def=this.calcH("00:00",defaultTime);
+    const actual=this.calcH("00:00",newTime);
+    const direction=actual<def?"earlier":"later";
+    const title=document.getElementById("start-note-title");
+    const sub=document.getElementById("start-note-subtitle");
+    if(title)title.textContent="⏰ Start Time Changed";
+    if(sub)sub.textContent=`Your start time was changed to ${this.toAmPm(newTime)} — ${direction} than the usual ${this.toAmPm(defaultTime)}. Please add a note to explain.`;
+    document.getElementById("start-note-overlay").classList.add("open");
+    setTimeout(()=>{if(inp)inp.focus();},80);
+  },
+
+  saveStartNote(){
+    const val=(document.getElementById("start-note-input").value||"").trim();
+    const date=this._startNoteDate;
+    if(date&&this.data[date]){
+      this.data[date].startNote=val;
+      this.save();
+    }
+    document.getElementById("start-note-overlay").classList.remove("open");
+    this.renderDay();
+  },
+
+  cancelStartNote(){
+    document.getElementById("start-note-overlay").classList.remove("open");
+  },
+
+  setDayOff(date,reason){
+    if(!reason){
+      // Clear the day-off status
+      if(this.data[date])delete this.data[date].dayOff;
+    } else {
+      if(!this.data[date])this.data[date]={startTime:"",startType:"",jobs:[{timeIn:"",timeOut:"",client:"",job:""}]};
+      this.data[date].dayOff=reason;
+      // Clear all times so hours = 0
+      this.data[date].startTime="";
+      this.data[date].startType="";
+      this.data[date].startTimeModified=false;
+      this.data[date].startNote="";
+      if(Array.isArray(this.data[date].jobs)){
+        this.data[date].jobs.forEach(j=>{j.timeIn="";j.timeOut="";});
+      }
+    }
+    this.save();
+    this.renderTabs();
+    this.renderDay();
+    this.renderSummary();
+  },
+
+  resetJobTimes(date,idx){
+    if(!this.data[date]||!Array.isArray(this.data[date].jobs)||!this.data[date].jobs[idx])return;
+    this.data[date].jobs[idx].timeIn="";
+    this.data[date].jobs[idx].timeOut="";
+    this.save();
+    this.renderDay();
+    this.renderTabs();
+    this.renderSummary();
+  },
+
+  updateJobNote(date,idx,val){
+    if(!this.data[date]||!this.data[date].jobs[idx])return;
+    this.data[date].jobs[idx].note=val;
+    this.save();
+    this.updateFooter(date);
+    this.renderTabs();
+    this.renderSummary();
+    this.checkJobLimits();
+  },
+
+  // Map tier color → sort letter (G/Y/O/R)
+  getTierLetter(h,job){
+    if(!h||h<=0)return"G";
+    const tiers=this.getJobTiers(job);
+    const tier=this.getHoursTier(h,tiers);
+    if(tier.color==="#FFCDD2")return"R";
+    if(tier.color==="#FFCC80")return"O";
+    if(tier.color==="#FFF9C4")return"Y";
+    if(tier.color==="#C8E6C9")return"G";
+    return"G";
+  },
+
+  checkJobLimits(){
+    const date=this.workdays[this.activeDay];
+    if(!date)return;
+    const{jobs}=this.dayData(date);
+    jobs.forEach((e,idx)=>{
+      const regEl=document.getElementById("rh-reg-"+idx);
+      const otEl=document.getElementById("rh-ot-"+idx);
+      const warnEl=document.getElementById("jlimit-"+idx);
+      const statusEl=document.getElementById("jlimit-status-"+idx);
+      if(!regEl)return;
+      const h=this.calcH(e.timeIn,e.timeOut);
+      const isOt=!!e.ot;
+      const tiers=this.getJobTiers(e.job);
+      const tier=this.getHoursTier(h,tiers);
+      const{max}=tiers;
+      const overMax=max!=null&&h>max;
+      const hasNote=!!(e.note&&e.note.trim());
+      const uncredited=overMax&&!hasNote;
+      // Style the active hours cell (reg or ot)
+      if(isOt){
+        // OT cell gets tier/error colouring; reg cell stays dim
+        if(uncredited){
+          otEl.style.background="var(--red-l)";otEl.style.color="var(--red)";otEl.title="Hours not counted — note required";
+        }else{
+          otEl.style.background="#FFEBEE";otEl.style.color="#C62828";otEl.title="Overtime ×1.5 + 0.75h drive (0.5h @ OT rate)";
+        }
+        regEl.style.background="";regEl.style.color="";regEl.title="";
+      }else{
+        if(uncredited){
+          regEl.style.background="var(--red-l)";regEl.style.color="var(--red)";regEl.title="Hours not counted — note required";
+        }else{
+          regEl.style.background=tier.color||"var(--green-l)";regEl.style.color=tier.text||"var(--green-d)";regEl.title="";
+        }
+        if(otEl){otEl.style.background="";otEl.style.color="";otEl.title="";}
+      }
+      if(warnEl){
+        if(overMax){
+          warnEl.style.display="flex";
+          const overEl=warnEl.querySelector(".jlimit-over");
+          if(overEl)overEl.textContent=this.fmtH(h-max)+" over max ("+this.fmtH(max)+")";
+          if(statusEl){
+            statusEl.textContent=uncredited
+              ?"⚠ Hours not counted — a note is required to post to totals"
+              :"✓ Note saved — hours are counted";
+            statusEl.style.color=uncredited?"var(--red)":"var(--green-d)";
+          }
+          const noteEl=document.getElementById("jlimit-note-"+idx);
+          if(noteEl&&!noteEl.value)noteEl.value=e.note||"";
+        }else{
+          warnEl.style.display="none";
+        }
+      }
+    });
+  },
+
+  setMaxHours(val){
+    const parsed=val===""||isNaN(parseFloat(val))?null:parseFloat(val);
+    this.customOpts.maxHours=parsed;
+    this.saveOpts();
+    this.checkMaxHours();
+  },
+
+  openOptions(){
+    document.getElementById("opt-overlay").classList.add("open");
+    const h2=document.querySelector("#opt-modal h2");
+    if(h2)h2.textContent="Manage Dropdown Options"+(this.techName?" — "+this.techName:"");
+    this.renderOptionLists();
+  },
+
+  closeOptions(){
+    document.getElementById("opt-overlay").classList.remove("open");
+    this.renderDay();
+  },
+
+  closeOptionsIfBg(e){
+    if(e.target===document.getElementById("opt-overlay"))this.closeOptions();
+  },
+
+  renderOptionLists(){
+    const rj=this.customOpts.removedJobs||[], rs=this.customOpts.removedStartTypes||[];
+    const lim={}; // legacy — tiers now used instead
+    const unlocked=this.managerUnlocked;
+    const lockBtnHtml=unlocked
+      ?`<button class="lock-btn" onclick="A.lockManager()" style="margin-bottom:.5rem">🔒 Lock hour limits</button>`
+      :`<button class="lock-btn" onclick="A.openPinModal()" style="margin-bottom:.5rem">🔓 Edit hour limits (PIN required)</button>`;
+    const tierInput=(name,tier,color)=>{
+      const tiers=this.getJobTiers(name);
+      const raw=tiers[tier]!=null?parseFloat(tiers[tier]):null;
+      const totalMins=raw!=null?Math.round(raw*60):null;
+      const hPart=totalMins!=null?Math.floor(totalMins/60):null;
+      const mPart=totalMins!=null?totalMins%60:null;
+      const dis=unlocked?"":" disabled";
+      const safeName=name.replace(/'/g,"\\'");
+      const label=({expected:"Target",over1:"Yellow",over2:"Orange",max:"Impr. Needed"})[tier]||tier;
+      const uid=("tier_"+name+"_"+tier).replace(/[^a-zA-Z0-9]/g,"_");
+      const hOpts=`<option value="">—</option>`+Array.from({length:13},(_,i)=>`<option value="${i}"${hPart===i?" selected":""}>${i}h</option>`).join("");
+      const mOpts=[0,5,10,15,20,25,30,35,40,45,50,55].map(m=>`<option value="${m}"${mPart===m?" selected":""}>${String(m).padStart(2,"0")}m</option>`).join("");
+      return`<div style="display:flex;flex-direction:column;align-items:center;gap:3px">
+        <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:${color}">${label}</span>
+        <select id="${uid}_h" class="limit-input" style="border-color:${color};width:52px;text-align:center;padding:.2rem .15rem"${dis}
+          onchange="A.setTierHM('${safeName}','${tier}',this.value,document.getElementById('${uid}_m').value)">
+          ${hOpts}
+        </select>
+        <select id="${uid}_m" class="limit-input" style="border-color:${color};width:52px;text-align:center;padding:.2rem .15rem"${dis}
+          onchange="A.setTierHM('${safeName}','${tier}',document.getElementById('${uid}_h').value,this.value)">
+          ${mOpts}
+        </select>
+      </div>`;
+    };
+    const jobRow=(name,removedBtn,isRemoved)=>{
+      if(isRemoved)return`<div class="opt-item" style="opacity:.45"><span style="text-decoration:line-through">${name}</span>${removedBtn}</div>`;
+      return`<div class="opt-item" style="flex-direction:column;align-items:stretch;gap:6px">
+        <div style="display:flex;align-items:center;gap:6px">
+          <span style="flex:1;font-size:13px">${name}</span>
+          ${removedBtn}
+        </div>
+        ${unlocked?`<div style="display:flex;gap:4px;align-items:center;margin-bottom:2px">
+          <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--g500);white-space:nowrap;margin-right:2px">Preset:</span>
+          ${A.TIER_PRESETS.map(p=>{
+            const ready=p.expected!=null;
+            const safeName2=name.replace(/'/g,"\\'");
+            return ready
+              ?`<button onclick="A.applyTierPreset('${safeName2}','${p.label}')" style="padding:.2rem .55rem;border-radius:99px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid var(--green);background:var(--green-l);color:var(--green-d);font-family:var(--sans)">${p.label}</button>`
+              :`<button disabled style="padding:.2rem .55rem;border-radius:99px;font-size:11px;font-weight:700;border:1px solid var(--g300);background:var(--g50);color:var(--g300);cursor:not-allowed;font-family:var(--sans)">${p.label}</button>`;
+          }).join("")}
+        </div>
+        <div style="display:flex;gap:6px;align-items:flex-end;padding:0 2px">
+          ${tierInput(name,"expected","#2E7D32")}
+          ${tierInput(name,"over1","#F9A825")}
+          ${tierInput(name,"over2","#E65100")}
+          ${tierInput(name,"max","#C62828")}
+        </div>`:''}
+      </div>`;
+    };
+    // Job list
+    const jl=document.getElementById("opt-job-list");
+    jl.innerHTML=lockBtnHtml+[
+      ...this.defaultJobs.map(j=>rj.includes(j)
+        ? jobRow(j,`<button class="rm-btn" style="color:var(--green);font-size:12px" onclick="A.restoreOption('job','${j}')" title="Restore">↩</button>`,true)
+        : jobRow(j,`<button class="rm-btn" onclick="A.removeDefault('job','${j}')" title="Remove">×</button>`,false)),
+      ...this.customOpts.jobs.map((j,i)=>jobRow(j,`<button class="rm-btn" onclick="A.removeOption('job',${i})" title="Remove">×</button>`,false))
+    ].join("");
+    // Show/hide max hours section based on lock state
+    const maxSection=document.getElementById("max-hours-section");
+    if(maxSection)maxSection.style.display=unlocked?"":"none";
+    const maxInp=document.getElementById("max-hours-input");
+    if(maxInp){maxInp.value=this.customOpts.maxHours!=null?this.customOpts.maxHours:"";maxInp.disabled=!unlocked;}
+    // Preset editor — visible only when manager is unlocked
+    const presetSection=document.getElementById("preset-levels-section");
+    if(presetSection)presetSection.style.display=unlocked?"":"none";
+    if(unlocked){
+      const pel=document.getElementById("preset-editor-list");
+      if(pel){
+        const tierPresetInput=(label,tier,color,val)=>{
+          const raw=val!=null?parseFloat(val):null;
+          const totalMins=raw!=null?Math.round(raw*60):null;
+          const hPart=totalMins!=null?Math.floor(totalMins/60):null;
+          const mPart=totalMins!=null?totalMins%60:null;
+          const uid=("preset_"+label+"_"+tier).replace(/[^a-zA-Z0-9]/g,"_");
+          const hOpts=`<option value="">—</option>`+Array.from({length:13},(_,i)=>`<option value="${i}"${hPart===i?" selected":""}>${i}h</option>`).join("");
+          const mOpts=[0,5,10,15,20,25,30,35,40,45,50,55].map(m=>`<option value="${m}"${mPart===m?" selected":""}>${String(m).padStart(2,"0")}m</option>`).join("");
+          return`<div style="display:flex;flex-direction:column;align-items:center;gap:2px">
+            <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:${color}">${({expected:"Target",over1:"Yellow",over2:"Orange",max:"Impr. Needed"})[tier]||tier}</span>
+            <select id="${uid}_h" class="limit-input" style="border-color:${color};width:52px;text-align:center;padding:.2rem .15rem"
+              onchange="A.setPresetTierHM('${label}','${tier}',this.value,document.getElementById('${uid}_m').value);A.renderOptionLists()">
+              ${hOpts}
+            </select>
+            <select id="${uid}_m" class="limit-input" style="border-color:${color};width:52px;text-align:center;padding:.2rem .15rem"
+              onchange="A.setPresetTierHM('${label}','${tier}',document.getElementById('${uid}_h').value,this.value)">
+              ${mOpts}
+            </select>
+          </div>`;
+        };
+        pel.innerHTML=this.TIER_PRESETS.map(p=>{
+          const eff=this.getEffectivePreset(p.label);
+          return`<div style="display:flex;align-items:flex-end;gap:8px;padding:.5rem .4rem;background:var(--g50);border-radius:var(--r);margin-bottom:6px;border:1px solid var(--g100)">
+            <span style="font-size:13px;font-weight:700;color:var(--g700);min-width:24px;padding-bottom:4px">${p.label}</span>
+            ${tierPresetInput(p.label,"expected","#2E7D32",eff.expected)}
+            ${tierPresetInput(p.label,"over1","#F9A825",eff.over1)}
+            ${tierPresetInput(p.label,"over2","#E65100",eff.over2)}
+            ${tierPresetInput(p.label,"max","#C62828",eff.max)}
+          </div>`;
+        }).join("");
+      }
+    }
+    // Start type list
+    const sl=document.getElementById("opt-start-list");
+    const stTimes=this.customOpts.startTypeTimes||{};
+    const stNeeds=this.customOpts.startTypeNeedsTime||{};
+    const effectiveTime=(t)=>stTimes[t]||(t==="Office Pick up Truck"?"07:30":"08:00");
+    const startTypeRow=(t,removedBtn,isRemoved,isCustom)=>{
+      if(isRemoved)return`<div class="opt-item" style="opacity:.45"><span style="text-decoration:line-through">${t}</span>${removedBtn}</div>`;
+      const safe=t.replace(/'/g,"\\'");
+      const needsReq=isCustom&&stNeeds[t];
+      const timeVal=effectiveTime(t);
+      const timeDisplay=this.toAmPm(timeVal)||timeVal;
+      let timeSection="";
+      if(unlocked){
+        timeSection=`<input type="time" value="${timeVal}"
+          style="padding:.28rem .4rem;border:1px solid var(--g300);border-radius:var(--r);font-size:12px;font-family:var(--mono);background:#fff;margin-left:auto"
+          onchange="A.setStartTypeTime('${safe}',this.value)">`;
+      } else if(needsReq){
+        timeSection=`<span style="font-size:11px;background:#FFF3E0;color:#E65100;border:1px solid #FFB74D;border-radius:99px;padding:.1rem .5rem;margin-left:auto;white-space:nowrap">⚠ Time TBD</span>`;
+      } else {
+        timeSection=`<span style="font-size:11px;color:var(--g500);margin-left:auto">${timeDisplay}</span>`;
+      }
+      return`<div class="opt-item" style="display:flex;align-items:center;gap:6px">
+        <span style="flex:1;font-size:13px">${t}</span>
+        ${timeSection}
+        ${removedBtn}
+      </div>`;
+    };
+    sl.innerHTML=[
+      ...this.defaultStartTypes.map(t=>rs.includes(t)
+        ? startTypeRow(t,`<button class="rm-btn" style="color:var(--green);font-size:12px" onclick="A.restoreOption('start','${t}')" title="Restore">↩</button>`,true,false)
+        : startTypeRow(t,`<button class="rm-btn" onclick="A.removeDefault('start','${t}')" title="Remove">×</button>`,false,false)),
+      ...this.customOpts.startTypes.map((t,i)=>startTypeRow(t,`<button class="rm-btn" onclick="A.removeOption('start',${i})" title="Remove">×</button>`,false,true,i))
+    ].join("");
+    // Show manager time picker in add row only when unlocked
+    const stTimeWrap=document.getElementById("opt-start-time-wrap");
+    if(stTimeWrap)stTimeWrap.style.display=unlocked?"flex":"none";
+  },
+
+  addOption(type){
+    const inputId=type==="job"?"opt-job-input":"opt-start-input";
+    const val=document.getElementById(inputId).value.trim();
+    if(!val){this.toast("Please enter an option name.","error");return;}
+    const list=type==="job"?this.customOpts.jobs:this.customOpts.startTypes;
+    const defaults=type==="job"?this.defaultJobs:this.defaultStartTypes;
+    if([...defaults,...list].some(x=>x.toLowerCase()===val.toLowerCase())){
+      this.toast("That option already exists.","error");return;
+    }
+    list.push(val);
+    if(type==="job"){
+      if(!this.customOpts.jobTiers)this.customOpts.jobTiers={};
+      this.customOpts.jobTiers[val]={expected:2};
+    }
+    if(type==="start"){
+      if(!this.customOpts.startTypeTimes)this.customOpts.startTypeTimes={};
+      if(!this.customOpts.startTypeNeedsTime)this.customOpts.startTypeNeedsTime={};
+      if(this.managerUnlocked){
+        const timeInp=document.getElementById("opt-start-time-input");
+        this.customOpts.startTypeTimes[val]=timeInp&&timeInp.value?timeInp.value:"08:00";
+        this.customOpts.startTypeNeedsTime[val]=false;
+      } else {
+        this.customOpts.startTypeTimes[val]="08:00";
+        this.customOpts.startTypeNeedsTime[val]=true;
+      }
+    }
+    this.saveOpts();
+    document.getElementById(inputId).value="";
+    this.renderOptionLists();
+    const msg=type==="start"&&!this.managerUnlocked
+      ?`"${val}" added — default 8:00 AM. Please request a custom start time.`
+      :`"${val}" added`;
+    this.toast(msg,type==="start"&&!this.managerUnlocked?"info":"success");
+  },
+
+  removeDefault(type,val){
+    const list=type==="job"?this.customOpts.removedJobs:this.customOpts.removedStartTypes;
+    if(!list.includes(val))list.push(val);
+    this.saveOpts(); this.renderOptionLists();
+  },
+
+  restoreOption(type,val){
+    const list=type==="job"?this.customOpts.removedJobs:this.customOpts.removedStartTypes;
+    const idx=list.indexOf(val); if(idx>=0)list.splice(idx,1);
+    this.saveOpts(); this.renderOptionLists();
+  },
+
+  removeOption(type,idx){
+    const list=type==="job"?this.customOpts.jobs:this.customOpts.startTypes;
+    list.splice(idx,1);
+    this.saveOpts();
+    this.renderOptionLists();
+  },
+
+  // ── Reset Data ──
+  openResetModal(){
+    const sel=document.getElementById("reset-tech-select");
+    if(sel){
+      sel.innerHTML='<option value="">— Select —</option><option value="__ALL__">⚠ All technicians</option>';
+      this.technicians.forEach(n=>{
+        const o=document.createElement("option");
+        o.value=n;o.textContent=n;sel.appendChild(o);
+      });
+      sel.value="";
+    }
+    document.getElementById("reset-overlay").classList.add("open");
+  },
+  closeResetModal(){
+    document.getElementById("reset-overlay").classList.remove("open");
+  },
+  confirmReset(){
+    const sel=document.getElementById("reset-tech-select");
+    const chosen=sel?sel.value:"";
+    if(!chosen){A.toast("Please select a technician or 'All technicians'.","error");return;}
+    const all=chosen==="__ALL__";
+    const label=all?"ALL technicians":`"${chosen}"`;
+    if(!confirm(`Clear all timesheet data for ${label}? This cannot be undone.`))return;
+
+    // 1. Clear localStorage
+    const toDelete=Object.keys(localStorage).filter(k=>{
+      if(all)return k.startsWith("ts|")||k.startsWith("ts_custom_opts|");
+      return(k.startsWith("ts|")&&k.endsWith("|"+chosen))||k==="ts_custom_opts|"+chosen;
+    });
+    toDelete.forEach(k=>localStorage.removeItem(k));
+
+    // 2. Clear in-memory data and re-render immediately
+    this.data={};this.synced={};
+    if(document.getElementById("sheet-area").style.display!=="none"){
+      this.renderTabs();this.renderDay();this.renderSummary();
+    }
+
+    // 3. Push empty draft to cloud to overwrite saved data
+    if(SCRIPT_URL&&SCRIPT_URL!=="YOUR_APPS_SCRIPT_URL_HERE"){
+      const techsToClear=all?this.technicians:[chosen];
+      techsToClear.forEach(name=>{
+        fetch(SCRIPT_URL,{method:"POST",mode:"no-cors",
+          headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({action:"save_draft",techName:name,
+            periodStart:this.periodStart||"",data:{},synced:{}})});
+      });
+    }
+
+    A.toast(all?"All timesheet data cleared.":`Data cleared for "${chosen}".`,"success");
+    this.closeResetModal();
+  },
+
+  toast(msg,type="info",ms=3500){
+    const el=document.getElementById("toast");
+    el.textContent=msg; el.className="show "+type;
+    clearTimeout(this._tt); this._tt=setTimeout(()=>{el.className=type;},ms);
+  }
+};
+
+
+const AC = {
+  readings:{},
+  db:[
+    {name:"Undercharge",suction:"low",head:"low",superheat:"high",subcooling:"low",suction_temp:"low",discharge_temp:"low",causes:["Not enough refrigerant in system","Refrigerant leak in system"]},
+    {name:"Overcharge",suction:"high",head:"high",superheat:"low",subcooling:"high",suction_temp:"high",discharge_temp:"low",causes:["Too much refrigerant was added"]},
+    {name:"Restriction",suction:"low",head:"low",superheat:"high",subcooling:"high",suction_temp:"low",discharge_temp:"low",causes:["Bad TXV valve","Blocked filter dryer","Kink in copper line","Oil in the lines (overheated compressor)"]},
+    {name:"Low Indoor Air Flow",suction:"low",head:"low",superheat:"low",subcooling:"high",suction_temp:"low",discharge_temp:"high",causes:["Dirty A coil","Blocked supply or return vents","Disconnected duct work"]},
+    {name:"Dirty Condenser",suction:"high",head:"high",superheat:"low",subcooling:"low",suction_temp:"high",discharge_temp:"low",causes:["Clean condenser of debris","Unit is under a deck","Overgrown bushes impeding air flow"]},
+    {name:"High Indoor Ambient",suction:"high",head:"high",superheat:"high",subcooling:"low",suction_temp:"high",discharge_temp:"low",causes:["Unit just turned on during high humidex day","Windows are open in the home"]},
+    {name:"Bad Compressor",suction:"low",head:"high",superheat:"high",subcooling:"low",suction_temp:"low",discharge_temp:"low",causes:["Try a hard start kit","Ohm out the compressor"]},
+    {name:"Air in System",suction:"high",head:"high",superheat:"low",subcooling:"low",suction_temp:"high",discharge_temp:"low",causes:["Remove refrigerant, vacuum, and recharge"]},
+  ],
+  keys:["suction","head","superheat","subcooling","suction_temp","discharge_temp"],
+
+  setReading(key,val,btn){
+    this.readings[key]=val;
+    const toggle=btn.closest('.ac-toggle');
+    toggle.querySelectorAll('button').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+  },
+
+  scoreMatch(condition){
+    let match=0,total=0;
+    this.keys.forEach(k=>{if(this.readings[k]!==undefined){total++;if(this.readings[k]===condition[k])match++;}});
+    return{match,total,pct:total>0?match/total:0};
+  },
+
+  diagnose(){
+    const entered=Object.keys(this.readings).length;
+    if(entered===0){alert("Please set at least one reading before running diagnostics.");return;}
+    const scored=this.db.map(c=>({...c,...this.scoreMatch(c)})).sort((a,b)=>b.pct-a.pct||b.match-a.match);
+    const best=scored[0];
+    const panel=document.getElementById('ac-result');
+    panel.classList.add('show');
+    const chips=this.keys.filter(k=>this.readings[k]).map(k=>{
+      const label=k.replace('_',' ').replace(/\b\w/g,c=>c.toUpperCase());
+      return`<span class="ac-reading-chip ${this.readings[k]}">${label}: ${this.readings[k].toUpperCase()}</span>`;
+    }).join('');
+    if(entered<4){
+      const top3=scored.slice(0,3);
+      let cards=top3.map((c,i)=>`
+        <div class="ac-multi-card" onclick="AC.showDetail(${JSON.stringify(c).replace(/"/g,'&quot;')})">
+          <div class="ac-multi-name">${c.name}</div>
+          <div class="ac-multi-score">${c.match}/${c.total} readings match &bull; click to expand</div>
+        </div>`).join('');
+      document.getElementById('ac-result-inner').innerHTML=`
+        <div class="ac-readings-bar">${chips}</div>
+        <div class="ac-causes-label">// TOP CANDIDATES (enter more readings for precise match)</div>
+        <div class="ac-multi-results">${cards}</div>
+        <div class="ac-detail-view" id="ac-detail-view"></div>`;
+    } else {
+      this.renderFull(best,chips);
+    }
+    panel.scrollIntoView({behavior:'smooth',block:'nearest'});
+  },
+
+  renderFull(c,chips){
+    const pct=Math.round(c.pct*100);
+    const matchClass=pct===100?'':'partial';
+    const matchLabel=pct===100?'EXACT MATCH':`${pct}% MATCH`;
+    const causes=c.causes.map(ca=>`<div class="ac-cause-item"><div class="ac-cause-dot"></div>${ca}</div>`).join('');
+    document.getElementById('ac-result-inner').innerHTML=`
+      ${chips?`<div class="ac-readings-bar">${chips}</div>`:''}
+      <div class="ac-result-header">
+        <div class="ac-result-condition">${c.name}</div>
+        <div class="ac-result-match ${matchClass}">${matchLabel}</div>
+      </div>
+      <div class="ac-scan-line"></div>
+      <div class="ac-causes-label">// LIKELY CAUSES</div>
+      ${causes}
+      <div style="margin-top:12px;display:flex;gap:8px;align-items:center">
+        <button class="ac-reset-btn" onclick="AC.resetAll()">Reset readings</button>
+        <span style="font-size:11px;color:var(--ac-muted);font-family:'Share Tech Mono',monospace">v1.0 — AC DIAG SYS</span>
+      </div>`;
+  },
+
+  showDetail(c){
+    const view=document.getElementById('ac-detail-view');
+    view.classList.add('show');
+    const causes=c.causes.map(ca=>`<div class="ac-cause-item"><div class="ac-cause-dot"></div>${ca}</div>`).join('');
+    view.innerHTML=`
+      <button class="ac-back-btn" onclick="document.getElementById('ac-detail-view').classList.remove('show')">&#8592; Back to list</button>
+      <div class="ac-result-condition">${c.name}</div>
+      <div class="ac-scan-line"></div>
+      <div class="ac-causes-label" style="margin-top:8px">// LIKELY CAUSES</div>
+      ${causes}
+      <div style="margin-top:10px"><button class="ac-reset-btn" onclick="AC.resetAll()">Reset readings</button></div>`;
+  },
+
+  resetAll(){
+    Object.keys(this.readings).forEach(k=>delete this.readings[k]);
+    document.querySelectorAll('#ac-tool-card .ac-toggle button').forEach(b=>b.classList.remove('active'));
+    document.getElementById('ac-result').classList.remove('show');
+  }
+};
+
+window.addEventListener("DOMContentLoaded",()=>{
+  A.loadTechs();
+
+  // Pay periods start every 14 days from April 6 2026
+  const ANCHOR = new Date("2026-04-06T12:00:00");
+  function isPayStart(date) {
+    const diff = Math.round((date - ANCHOR) / (1000*60*60*24));
+    return diff >= 0 && diff % 14 === 0;
+  }
+
+  // Find the current/closest pay period start (most recent start <= today)
+  function getCurrentPayStart() {
+    const today = new Date();
+    today.setHours(12,0,0,0);
+    const diffDays = Math.floor((today - ANCHOR) / (1000*60*60*24));
+    const periodNum = Math.floor(diffDays / 14);
+    const cur = new Date(ANCHOR);
+    cur.setDate(ANCHOR.getDate() + periodNum * 14);
+    return cur;
+  }
+
+  const currentStart = getCurrentPayStart();
+  const currentStr = currentStart.toISOString().split("T")[0];
+
+  // Pre-fill with current pay period
+  const pi = document.getElementById("period-start");
+  if(pi) pi.value = currentStr;
+
+  flatpickr("#period-start", {
+    dateFormat: "Y-m-d",
+    defaultDate: currentStr,
+    allowInput: false,
+    disableMobile: true,
+    enable: [function(date) { return isPayStart(date) && date <= currentStart; }],
+    onDayCreate: function(dObj, dStr, fp, dayElem) {
+      const d = dayElem.dateObj;
+      if (!d) return;
+      if (!isPayStart(d)) return;
+      const ds = d.toISOString().split("T")[0];
+      if (ds === currentStr) {
+        dayElem.classList.add("pay-current");
+        dayElem.title = "Current pay period";
+      } else {
+        dayElem.classList.add("pay-start");
+        dayElem.title = "Pay period start";
+      }
+    }
+  });
+});
+</script>
+
+
+<div class="flatpickr-calendar animate" tabindex="-1"><div class="flatpickr-months"><span class="flatpickr-prev-month"><svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 17 17"><g></g><path d="M5.207 8.471l7.146 7.147-0.707 0.707-7.853-7.854 7.854-7.853 0.707 0.707-7.147 7.146z"></path></svg></span><div class="flatpickr-month"><div class="flatpickr-current-month"><select class="flatpickr-monthDropdown-months" aria-label="Month" tabindex="-1"><option class="flatpickr-monthDropdown-month" value="0" tabindex="-1">January</option><option class="flatpickr-monthDropdown-month" value="1" tabindex="-1">February</option><option class="flatpickr-monthDropdown-month" value="2" tabindex="-1">March</option><option class="flatpickr-monthDropdown-month" value="3" tabindex="-1">April</option><option class="flatpickr-monthDropdown-month" value="4" tabindex="-1">May</option><option class="flatpickr-monthDropdown-month" value="5" tabindex="-1">June</option><option class="flatpickr-monthDropdown-month" value="6" tabindex="-1">July</option><option class="flatpickr-monthDropdown-month" value="7" tabindex="-1">August</option><option class="flatpickr-monthDropdown-month" value="8" tabindex="-1">September</option><option class="flatpickr-monthDropdown-month" value="9" tabindex="-1">October</option><option class="flatpickr-monthDropdown-month" value="10" tabindex="-1">November</option><option class="flatpickr-monthDropdown-month" value="11" tabindex="-1">December</option></select><div class="numInputWrapper"><input class="numInput cur-year" type="number" tabindex="-1" aria-label="Year"><span class="arrowUp"></span><span class="arrowDown"></span></div></div></div><span class="flatpickr-next-month"><svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 17 17"><g></g><path d="M13.207 8.472l-7.854 7.854-0.707-0.707 7.146-7.146-7.146-7.148 0.707-0.707 7.854 7.854z"></path></svg></span></div><div class="flatpickr-innerContainer"><div class="flatpickr-rContainer"><div class="flatpickr-weekdays"><div class="flatpickr-weekdaycontainer">
+      <span class="flatpickr-weekday">
+        Sun</span><span class="flatpickr-weekday">Mon</span><span class="flatpickr-weekday">Tue</span><span class="flatpickr-weekday">Wed</span><span class="flatpickr-weekday">Thu</span><span class="flatpickr-weekday">Fri</span><span class="flatpickr-weekday">Sat
+      </span>
+      </div></div><div class="flatpickr-days" tabindex="-1"><div class="dayContainer"><span class="flatpickr-day prevMonthDay flatpickr-disabled" aria-label="April 26, 2026">26</span><span class="flatpickr-day prevMonthDay flatpickr-disabled" aria-label="April 27, 2026">27</span><span class="flatpickr-day prevMonthDay flatpickr-disabled" aria-label="April 28, 2026">28</span><span class="flatpickr-day prevMonthDay flatpickr-disabled" aria-label="April 29, 2026">29</span><span class="flatpickr-day prevMonthDay flatpickr-disabled" aria-label="April 30, 2026">30</span><span class="flatpickr-day flatpickr-disabled" aria-label="May 1, 2026">1</span><span class="flatpickr-day flatpickr-disabled" aria-label="May 2, 2026">2</span><span class="flatpickr-day flatpickr-disabled" aria-label="May 3, 2026">3</span><span class="flatpickr-day selected pay-current" aria-label="May 4, 2026" tabindex="-1" title="Current pay period">4</span><span class="flatpickr-day flatpickr-disabled" aria-label="May 5, 2026">5</span><span class="flatpickr-day flatpickr-disabled" aria-label="May 6, 2026">6</span><span class="flatpickr-day flatpickr-disabled" aria-label="May 7, 2026">7</span><span class="flatpickr-day today flatpickr-disabled" aria-label="May 8, 2026" aria-current="date">8</span><span class="flatpickr-day flatpickr-disabled" aria-label="May 9, 2026">9</span><span class="flatpickr-day flatpickr-disabled" aria-label="May 10, 2026">10</span><span class="flatpickr-day flatpickr-disabled" aria-label="May 11, 2026">11</span><span class="flatpickr-day flatpickr-disabled" aria-label="May 12, 2026">12</span><span class="flatpickr-day flatpickr-disabled" aria-label="May 13, 2026">13</span><span class="flatpickr-day flatpickr-disabled" aria-label="May 14, 2026">14</span><span class="flatpickr-day flatpickr-disabled" aria-label="May 15, 2026">15</span><span class="flatpickr-day flatpickr-disabled" aria-label="May 16, 2026">16</span><span class="flatpickr-day flatpickr-disabled" aria-label="May 17, 2026">17</span><span class="flatpickr-day flatpickr-disabled pay-start" aria-label="May 18, 2026" title="Pay period start">18</span><span class="flatpickr-day flatpickr-disabled" aria-label="May 19, 2026">19</span><span class="flatpickr-day flatpickr-disabled" aria-label="May 20, 2026">20</span><span class="flatpickr-day flatpickr-disabled" aria-label="May 21, 2026">21</span><span class="flatpickr-day flatpickr-disabled" aria-label="May 22, 2026">22</span><span class="flatpickr-day flatpickr-disabled" aria-label="May 23, 2026">23</span><span class="flatpickr-day flatpickr-disabled" aria-label="May 24, 2026">24</span><span class="flatpickr-day flatpickr-disabled" aria-label="May 25, 2026">25</span><span class="flatpickr-day flatpickr-disabled" aria-label="May 26, 2026">26</span><span class="flatpickr-day flatpickr-disabled" aria-label="May 27, 2026">27</span><span class="flatpickr-day flatpickr-disabled" aria-label="May 28, 2026">28</span><span class="flatpickr-day flatpickr-disabled" aria-label="May 29, 2026">29</span><span class="flatpickr-day flatpickr-disabled" aria-label="May 30, 2026">30</span><span class="flatpickr-day flatpickr-disabled" aria-label="May 31, 2026">31</span><span class="flatpickr-day nextMonthDay flatpickr-disabled pay-start" aria-label="June 1, 2026" title="Pay period start">1</span><span class="flatpickr-day nextMonthDay flatpickr-disabled" aria-label="June 2, 2026">2</span><span class="flatpickr-day nextMonthDay flatpickr-disabled" aria-label="June 3, 2026">3</span><span class="flatpickr-day nextMonthDay flatpickr-disabled" aria-label="June 4, 2026">4</span><span class="flatpickr-day nextMonthDay flatpickr-disabled" aria-label="June 5, 2026">5</span><span class="flatpickr-day nextMonthDay flatpickr-disabled" aria-label="June 6, 2026">6</span></div></div></div></div></div></body></html>
