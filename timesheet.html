@@ -129,6 +129,10 @@ header h1{font-size:13px;font-weight:700;letter-spacing:.05em;text-transform:upp
 .day-total-bar{display:flex;align-items:center;justify-content:space-between;padding:7px 13px 9px;border-top:1px solid var(--bdr);background:var(--surf2)}
 .dtl-label{font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--mut)}
 .dtl-val{font-family:var(--mono);font-size:14px;font-weight:700;color:var(--blu)}
+.stat-pay-info{display:flex;align-items:center;gap:10px;padding:7px 13px;border-top:1px solid rgba(180,120,10,.2);background:rgba(255,251,235,.7);flex-wrap:wrap}
+.spi-label{font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--amb)}
+.spi-val{font-family:var(--mono);font-size:15px;font-weight:700;color:var(--amb)}
+.spi-note{font-size:10px;color:var(--mut);margin-left:auto}
 .shift-tot{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--blu);white-space:nowrap;padding:0 4px;align-self:flex-start;margin-top:2px;flex-shrink:0}
 @keyframes spin{to{transform:rotate(360deg)}}
 .spin{display:inline-block;width:9px;height:9px;border:1.5px solid currentColor;border-top-color:transparent;border-radius:50%;animation:spin .7s linear infinite}
@@ -242,6 +246,43 @@ function getPeriods(){
 }
 function fd(d){return d.toLocaleDateString('en-CA',{month:'short',day:'numeric'});}
 
+// ── Canadian Stat Holidays (Ontario) ─────────────────────────
+function getEaster(y){
+  const a=y%19,b=Math.floor(y/100),c=y%100,d=Math.floor(b/4),e=b%4;
+  const f=Math.floor((b+8)/25),g=Math.floor((b-f+1)/3);
+  const h=(19*a+b-d-g+15)%30,i=Math.floor(c/4),k=c%4;
+  const l=(32+2*e+2*i-h-k)%7,m=Math.floor((a+11*h+22*l)/451);
+  const mo=Math.floor((h+l-7*m+114)/31),dy=((h+l-7*m+114)%31)+1;
+  return new Date(y,mo-1,dy);
+}
+function getStatHolidays(y){
+  const h={};
+  const iso=d=>d.toISOString().split('T')[0];
+  const addFixed=(mo,dy,name)=>h[iso(new Date(y,mo-1,dy))]=name;
+  const nextMon=d=>{const r=new Date(d);while(r.getDay()!==1)r.setDate(r.getDate()+1);return r;};
+  const prevMon=d=>{const r=new Date(d);while(r.getDay()!==1)r.setDate(r.getDate()-1);return r;};
+  const nthMon=(mo,n)=>{const d=new Date(y,mo-1,1);let c=0;while(c<n){if(d.getDay()===1)c++;if(c<n)d.setDate(d.getDate()+1);}return d;};
+  // New Year's Day
+  addFixed(1,1,"New Year's Day");
+  // Family Day — 3rd Monday in February
+  h[iso(nthMon(2,3))]="Family Day";
+  // Good Friday — 2 days before Easter
+  const gf=getEaster(y);gf.setDate(gf.getDate()-2);h[iso(gf)]="Good Friday";
+  // Victoria Day — last Monday strictly before May 25
+  h[iso(prevMon(new Date(y,4,24)))]="Victoria Day";
+  // Canada Day — July 1 (observed Mon if Sun)
+  const cd=new Date(y,6,1);if(cd.getDay()===0)cd.setDate(2);h[iso(cd)]="Canada Day";
+  // Labour Day — 1st Monday in September
+  h[iso(nextMon(new Date(y,8,1)))]="Labour Day";
+  // Thanksgiving — 2nd Monday in October
+  h[iso(nthMon(10,2))]="Thanksgiving";
+  // Christmas Day
+  addFixed(12,25,"Christmas Day");
+  // Boxing Day
+  addFixed(12,26,"Boxing Day");
+  return h;
+}
+
 // ── Staff ─────────────────────────────────────────────────────
 const S={
   list:[],
@@ -301,7 +342,7 @@ const S={
 // ── Timesheet ─────────────────────────────────────────────────
 const T={
   name:'',ps:'',days:[],data:{},
-  _perm:'unknown',_pd:null,_iv:null,
+  _perm:'unknown',_pd:null,_iv:null,_hols:{},
 
   init(){
     setInterval(()=>{
@@ -362,6 +403,8 @@ const T={
     if(!name){toast('Select an employee');return;}
     if(!ps){toast('Select a pay period');return;}
     this.name=name;this.ps=ps;
+    const _y=new Date(ps+'T12:00:00').getFullYear();
+    this._hols={...getStatHolidays(_y),...getStatHolidays(_y+1)};
     this.days=[];
     const base=new Date(ps+'T12:00:00');
     for(let i=0;i<14;i++){const d=new Date(base);d.setDate(base.getDate()+i);this.days.push(d.toISOString().split('T')[0]);}
@@ -516,6 +559,18 @@ const T={
     this.save();this.render();
   },
 
+  calcStatPay(date){
+    // Ontario formula: total hours worked before stat ÷ days worked before stat = avg daily hours
+    const before=this.days.filter(d=>d<date);
+    let total=0,worked=0;
+    before.forEach(d=>{
+      const e=this.data[d]||{};
+      const hrs=(e.punches||[]).reduce((s,p)=>s+this.ph(p.in,p.out),0);
+      if(hrs>0){total+=hrs;worked++;}
+    });
+    return{hrs:worked>0?total/worked:0,worked,total};
+  },
+
   render(){
     const body=document.getElementById('body');
     const today=new Date().toISOString().split('T')[0];
@@ -530,20 +585,31 @@ const T={
         const e=this.data[d]||{punches:[],active:null};
         const ps=e.punches||[];
         const dh=ps.reduce((s,p)=>s+this.ph(p.in,p.out),0);
-        const cls=`day${tdy?' today':wknd?' wknd':fut?' fut':''}${e.stat?' stat':''}`;
+        const autoHol=this._hols[d]||'';
+        const displayHol=e.stat===false?'':(typeof e.stat==='string'&&e.stat?e.stat:autoHol);
+        const cls=`day${tdy?' today':wknd?' wknd':fut?' fut':''}${displayHol?' stat':''}`;
         const pbtn=e.active
           ?`<button class="co-btn" onclick="T.tap('${d}')">🔴 Clock Out</button>`
           :`<button class="ci-btn" onclick="T.tap('${d}')">🟢 Clock In</button>`;
-        const holName=typeof e.stat==='string'&&e.stat?e.stat:'';
-        const statBtn=`<button class="stat-btn${holName?' on':''}" onclick="T.setHoliday('${d}')" title="${holName||'Mark as holiday'}">${holName?'⭐ '+holName:'+ Holiday'}</button>`;
+        const statBtn=`<button class="stat-btn${displayHol?' on':''}" onclick="T.setHoliday('${d}')" title="${displayHol||'Mark as holiday'}">${displayHol?'⭐ '+displayHol:'+ Holiday'}</button>`;
         h+=`<div class="${cls}"><div class="dhead">
           <div class="dname">${DAYS[dow]}</div>
           <div class="ddate">${this.fd2(d)}</div>
           ${tdy?'<span class="tbadge">Today</span>':''}
-          ${holName?`<span class="tbadge" style="background:var(--amb2);color:var(--amb);border-color:rgba(180,120,10,.3)">${holName}</span>`:''}
+          ${displayHol?`<span class="tbadge" style="background:var(--amb2);color:var(--amb);border-color:rgba(180,120,10,.3)">${displayHol}</span>`:''}
           ${!fut?statBtn:''}
           ${!fut?pbtn:''}
         </div>`;
+        if(displayHol){
+          const sp=this.calcStatPay(d);
+          const spHrs=sp.worked>0?this.dur(sp.hrs*3600000):'—';
+          const spNote=sp.worked>0?`avg of ${sp.worked} day${sp.worked!==1?'s':''} worked this period`:'no prior days worked in period';
+          h+=`<div class="stat-pay-info">
+            <span class="spi-label">Stat Pay Entitlement</span>
+            <span class="spi-val">${spHrs}</span>
+            <span class="spi-note">${spNote}</span>
+          </div>`;
+        }
         if(e.active){
           h+=`<div class="punches"><div class="prow">
             <div class="ptimes">
@@ -628,12 +694,17 @@ const T={
     this.days.forEach(d=>{
       const e=this.data[d]||{};
       const punches=e.punches||[];
-      if(!punches.length&&!e.stat)return;
+      const autoHol=this._hols[d]||'';
+      const displayHol=e.stat===false?'':(typeof e.stat==='string'&&e.stat?e.stat:autoHol);
+      if(!punches.length&&!displayHol)return;
       const dow=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][new Date(d+'T12:00:00').getDay()];
       let dayHours=0;
 
-      if(e.stat){
-        rows.push([d,dow,this.name,'Stat Holiday','','','','','','','','']);
+      if(displayHol){
+        const sp=this.calcStatPay(d);
+        rows.push([d,dow,this.name,displayHol,'','',
+          sp.worked>0?parseFloat(sp.hrs.toFixed(4)):'',
+          '','Stat Pay Auto-Calc','','','']);
         colors.push('#FFCC80');
       }
 
@@ -696,15 +767,17 @@ const T={
   },
 
   csv(){
-    const rows=[['Name','Date','Day','Clock In','Clock Out','Duration','Note','Stat Holiday','Check In Address','Check Out Address']];
+    const rows=[['Name','Date','Day','Clock In','Clock Out','Duration','Note','Holiday','Check In Address','Check Out Address']];
     this.days.forEach(d=>{
       const e=this.data[d]||{};
       const dow=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][new Date(d+'T12:00:00').getDay()];
+      const autoHol=this._hols[d]||'';
+      const displayHol=e.stat===false?'':(typeof e.stat==='string'&&e.stat?e.stat:autoHol);
       (e.punches||[]).forEach(p=>{
         rows.push([`"${this.name}"`,d,dow,this.ap(p.in),this.ap(p.out),
           this.dur(this.ph(p.in,p.out)*3600000),
           `"${(p.note||'').replace(/"/g,'""')}"`,
-          e.stat?'Yes':'',
+          displayHol||'',
           `"${(p.li||'').replace(/^📍\s*/,'')}"`,`"${(p.lo||'').replace(/^📍\s*/,'')}"`]);
       });
     });
