@@ -134,6 +134,14 @@ header h1{font-size:13px;font-weight:700;letter-spacing:.05em;text-transform:upp
 .spi-val{font-family:var(--mono);font-size:15px;font-weight:700;color:var(--amb)}
 .spi-note{font-size:10px;color:var(--mut);margin-left:auto}
 .shift-tot{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--blu);white-space:nowrap;padding:0 4px;align-self:flex-start;margin-top:2px;flex-shrink:0}
+.add-hrs-btn{display:inline-flex;align-items:center;gap:5px;padding:5px 11px;border-radius:var(--rs);font-size:12px;font-weight:700;font-family:var(--fnt);cursor:pointer;background:var(--blu2);color:var(--blu);border:1px solid rgba(21,101,192,.2);white-space:nowrap;-webkit-tap-highlight-color:transparent}
+.manual-form{display:none;align-items:center;gap:8px;padding:10px 13px;border-top:1px solid var(--bdr);background:var(--surf2);flex-wrap:wrap}
+.manual-form.open{display:flex}
+.mf-lbl{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--mut);white-space:nowrap}
+.mf-time{background:var(--surf);border:1px solid var(--bdr);border-radius:var(--rs);color:var(--txt);font-family:var(--mono);font-size:13px;padding:6px 9px;outline:none;width:126px}
+.mf-time:focus{border-color:var(--blu)}
+.mf-save{background:var(--blu);color:#fff;border:none;border-radius:var(--rs);font-size:12px;font-weight:700;padding:7px 14px;cursor:pointer;font-family:var(--fnt)}
+.mf-cancel{background:none;border:1px solid var(--bdr);border-radius:var(--rs);color:var(--mut);font-size:12px;padding:7px 10px;cursor:pointer;font-family:var(--fnt)}
 @keyframes spin{to{transform:rotate(360deg)}}
 .spin{display:inline-block;width:9px;height:9px;border:1.5px solid currentColor;border-top-color:transparent;border-radius:50%;animation:spin .7s linear infinite}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.4}}
@@ -550,6 +558,30 @@ const T={
     this.save();
   },
 
+  openManual(date){
+    document.getElementById('mf-'+date).classList.add('open');
+    document.getElementById('abtn-'+date).style.display='none';
+    document.getElementById('mi-'+date).focus();
+  },
+
+  closeManual(date){
+    document.getElementById('mf-'+date).classList.remove('open');
+    document.getElementById('abtn-'+date).style.display='';
+    document.getElementById('mi-'+date).value='';
+    document.getElementById('mo-'+date).value='';
+  },
+
+  saveManual(date){
+    const inVal=document.getElementById('mi-'+date).value;
+    const outVal=document.getElementById('mo-'+date).value;
+    if(!inVal||!outVal){toast('Enter both a start and end time');return;}
+    if(inVal>=outVal){toast('End time must be after start time');return;}
+    const e=this.day(date);
+    if(!e.punches)e.punches=[];
+    e.punches.push({in:inVal+':00',out:outVal+':00',li:'Manual entry',lo:'Manual entry',note:''});
+    this.save();this.render();toast('Hours saved');
+  },
+
   setHoliday(date){
     const e=this.day(date);
     const cur=typeof e.stat==='string'?e.stat:'';
@@ -588,6 +620,7 @@ const T={
         const autoHol=this._hols[d]||'';
         const displayHol=e.stat===false?'':(typeof e.stat==='string'&&e.stat?e.stat:autoHol);
         const cls=`day${tdy?' today':wknd?' wknd':fut?' fut':''}${displayHol?' stat':''}`;
+        const isPast=!tdy&&!fut;
         const pbtn=e.active
           ?`<button class="co-btn" onclick="T.tap('${d}')">🔴 Clock Out</button>`
           :`<button class="ci-btn" onclick="T.tap('${d}')">🟢 Clock In</button>`;
@@ -596,7 +629,8 @@ const T={
           <div class="ddate">${this.fd2(d)}</div>
           ${tdy?'<span class="tbadge">Today</span>':''}
           ${displayHol?`<span class="tbadge" style="background:var(--amb2);color:var(--amb);border-color:rgba(180,120,10,.3)">${displayHol}</span>`:''}
-          ${!fut?pbtn:''}
+          ${tdy?pbtn:''}
+          ${isPast?`<button class="add-hrs-btn" id="abtn-${d}" onclick="T.openManual('${d}')">✎ Add Hours</button>`:''}
         </div>`;
         if(displayHol){
           const sp=this.calcStatPay(d);
@@ -606,6 +640,16 @@ const T={
             <span class="spi-label">Stat Pay Entitlement</span>
             <span class="spi-val">${spHrs}</span>
             <span class="spi-note">${spNote}</span>
+          </div>`;
+        }
+        if(isPast){
+          h+=`<div class="manual-form" id="mf-${d}">
+            <span class="mf-lbl">From</span>
+            <input type="time" class="mf-time" id="mi-${d}">
+            <span class="mf-lbl">To</span>
+            <input type="time" class="mf-time" id="mo-${d}">
+            <button class="mf-save" onclick="T.saveManual('${d}')">✓ Save</button>
+            <button class="mf-cancel" onclick="T.closeManual('${d}')">Cancel</button>
           </div>`;
         }
         if(e.active){
