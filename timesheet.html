@@ -47,7 +47,7 @@ header h1{font-size:13px;font-weight:700;letter-spacing:.05em;text-transform:upp
 .wk-lbl{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mut);margin:14px 0 7px 2px}
 .day{background:var(--surf);border:1px solid var(--bdr);border-radius:11px;margin-bottom:7px;overflow:hidden}
 .day.today{border-color:rgba(21,101,192,.35);background:#fafcff}
-.day.wknd{opacity:.45}
+.day.wknd{opacity:.85}
 .day.fut{opacity:.3;pointer-events:none}
 .dhead{display:flex;align-items:center;gap:9px;padding:10px 13px;flex-wrap:wrap}
 .dname{font-size:13px;font-weight:700;min-width:88px}
@@ -120,6 +120,15 @@ header h1{font-size:13px;font-weight:700;letter-spacing:.05em;text-transform:upp
 .csync-saving{background:var(--blu2);color:var(--blu);border:1px solid rgba(21,101,192,.2)}
 .csync-ok{background:rgba(21,128,75,.1);color:var(--grn);border:1px solid rgba(21,128,75,.2)}
 .csync-err{background:var(--red3);color:var(--red);border:1px solid var(--red2)}
+.stat-btn{background:none;border:1px solid var(--bdr);border-radius:5px;color:var(--mut);font-size:10px;font-weight:600;padding:2px 7px;cursor:pointer;transition:all .15s;flex-shrink:0}
+.stat-btn.on{background:var(--amb2);color:var(--amb);border-color:rgba(180,120,10,.3)}
+.day.stat{background:#fffbeb;border-color:rgba(180,120,10,.35)}
+.note-inp{width:100%;margin-top:5px;background:var(--surf2);border:1px solid var(--bdr);border-radius:var(--rs);color:var(--txt);font-family:var(--fnt);font-size:11px;padding:5px 8px;outline:none;transition:border-color .15s}
+.note-inp:focus{border-color:var(--blu)}
+.note-inp::placeholder{color:var(--mut)}
+.day-total-bar{display:flex;align-items:center;justify-content:space-between;padding:7px 13px 9px;border-top:1px solid var(--bdr);background:var(--surf2)}
+.dtl-label{font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--mut)}
+.dtl-val{font-family:var(--mono);font-size:14px;font-weight:700;color:var(--blu)}
 @keyframes spin{to{transform:rotate(360deg)}}
 .spin{display:inline-block;width:9px;height:9px;border:1.5px solid currentColor;border-top-color:transparent;border-radius:50%;animation:spin .7s linear infinite}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.4}}
@@ -491,6 +500,18 @@ const T={
     this.save();this.render();
   },
 
+  setNote(date,idx,val){
+    const e=this.data[date];
+    if(e?.punches?.[idx]!==undefined)e.punches[idx].note=val;
+    this.save();
+  },
+
+  toggleStat(date){
+    const e=this.day(date);
+    e.stat=!e.stat;
+    this.save();this.render();
+  },
+
   render(){
     const body=document.getElementById('body');
     const today=new Date().toISOString().split('T')[0];
@@ -505,16 +526,18 @@ const T={
         const e=this.data[d]||{punches:[],active:null};
         const ps=e.punches||[];
         const dh=ps.reduce((s,p)=>s+this.ph(p.in,p.out),0);
-        const cls=`day${tdy?' today':wknd?' wknd':fut?' fut':''}`;
+        const cls=`day${tdy?' today':wknd?' wknd':fut?' fut':''}${e.stat?' stat':''}`;
         const pbtn=e.active
           ?`<button class="co-btn" onclick="T.tap('${d}')">🔴 Clock Out</button>`
           :`<button class="ci-btn" onclick="T.tap('${d}')">🟢 Clock In</button>`;
+        const statBtn=`<button class="stat-btn${e.stat?' on':''}" onclick="T.toggleStat('${d}')">${e.stat?'⭐ Stat':'☆ Stat'}</button>`;
         h+=`<div class="${cls}"><div class="dhead">
           <div class="dname">${DAYS[dow]}</div>
           <div class="ddate">${this.fd2(d)}</div>
           ${tdy?'<span class="tbadge">Today</span>':''}
-          ${dh>0?`<span class="dtot">${this.dur(dh*3600000)}</span>`:''}
-          ${!wknd&&!fut?pbtn:''}
+          ${e.stat?'<span class="tbadge" style="background:var(--amb2);color:var(--amb);border-color:rgba(180,120,10,.3)">Stat Holiday</span>':''}
+          ${!fut?statBtn:''}
+          ${!fut?pbtn:''}
         </div>`;
         if(e.active){
           h+=`<div class="punches"><div class="prow">
@@ -539,14 +562,16 @@ const T={
                 <div class="ptline">
                   <span class="pc pc-i">▼ IN ${this.ap(p.in)}</span>
                   <span class="pc pc-o">▲ OUT ${this.ap(p.out)}</span>
-                  <span class="pc pc-d">⏱ ${this.dur(this.ph(p.in,p.out)*3600000)}</span>
+                  <span class="pc pc-d">Shift: ${this.dur(this.ph(p.in,p.out)*3600000)}</span>
                 </div>${lh}
+                <input class="note-inp" type="text" placeholder="Add a note…" value="${(p.note||'').replace(/"/g,'&quot;')}" oninput="T.setNote('${d}',${idx},this.value)">
               </div>
               <button class="pdel" onclick="T.del('${d}',${idx})">✕</button>
             </div>`;
           });
           h+=`</div>`;
         }
+        if(dh>0){h+=`<div class="day-total-bar"><span class="dtl-label">Day Total</span><span class="dtl-val">${this.dur(dh*3600000)}</span></div>`;}
         h+=`</div>`;
       }
     });
@@ -598,9 +623,14 @@ const T={
     this.days.forEach(d=>{
       const e=this.data[d]||{};
       const punches=e.punches||[];
-      if(!punches.length)return;
+      if(!punches.length&&!e.stat)return;
       const dow=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][new Date(d+'T12:00:00').getDay()];
       let dayHours=0;
+
+      if(e.stat){
+        rows.push([d,dow,this.name,'Stat Holiday','','','','','','','','']);
+        colors.push('#FFCC80');
+      }
 
       punches.forEach(p=>{
         const hrs=this.ph(p.in,p.out);
@@ -614,7 +644,7 @@ const T={
           this.ap(p.out),
           parseFloat(hrs.toFixed(4)),
           '',
-          '',
+          p.note||'',
           '',
           (p.li||'').replace(/^📍\s*/,''),
           (p.lo||'').replace(/^📍\s*/,'')
@@ -622,10 +652,12 @@ const T={
         colors.push('#FFFFFF');
       });
 
-      // Day Total row — light blue
-      rows.push(['','',this.name,'Day Total','','',parseFloat(dayHours.toFixed(4)),'','','','','']);
-      colors.push('#BBDEFB');
-      totalHours+=dayHours;
+      // Day Total row — light blue (only if there are punches)
+      if(punches.length){
+        rows.push(['','',this.name,'Day Total','','',parseFloat(dayHours.toFixed(4)),'','','','','']);
+        colors.push('#BBDEFB');
+        totalHours+=dayHours;
+      }
     });
 
     if(!rows.length){toast('No punch data to save');btn.disabled=false;btn.textContent='📊 Save to Sheet';return;}
@@ -659,13 +691,15 @@ const T={
   },
 
   csv(){
-    const rows=[['Name','Date','Day','Clock In','Clock Out','Duration','Check In Address','Check Out Address']];
+    const rows=[['Name','Date','Day','Clock In','Clock Out','Duration','Note','Stat Holiday','Check In Address','Check Out Address']];
     this.days.forEach(d=>{
       const e=this.data[d]||{};
       const dow=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][new Date(d+'T12:00:00').getDay()];
       (e.punches||[]).forEach(p=>{
         rows.push([`"${this.name}"`,d,dow,this.ap(p.in),this.ap(p.out),
           this.dur(this.ph(p.in,p.out)*3600000),
+          `"${(p.note||'').replace(/"/g,'""')}"`,
+          e.stat?'Yes':'',
           `"${(p.li||'').replace(/^📍\s*/,'')}"`,`"${(p.lo||'').replace(/^📍\s*/,'')}"`]);
       });
     });
