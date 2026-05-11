@@ -120,7 +120,7 @@ header h1{font-size:13px;font-weight:700;letter-spacing:.05em;text-transform:upp
 .csync-saving{background:var(--blu2);color:var(--blu);border:1px solid rgba(21,101,192,.2)}
 .csync-ok{background:rgba(21,128,75,.1);color:var(--grn);border:1px solid rgba(21,128,75,.2)}
 .csync-err{background:var(--red3);color:var(--red);border:1px solid var(--red2)}
-.stat-btn{background:none;border:1px solid var(--bdr);border-radius:5px;color:var(--mut);font-size:10px;font-weight:600;padding:2px 7px;cursor:pointer;transition:all .15s;flex-shrink:0}
+.stat-btn{background:none;border:1px solid var(--bdr);border-radius:5px;color:var(--mut);font-size:10px;font-weight:600;padding:2px 7px;cursor:pointer;transition:all .15s;flex-shrink:0;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .stat-btn.on{background:var(--amb2);color:var(--amb);border-color:rgba(180,120,10,.3)}
 .day.stat{background:#fffbeb;border-color:rgba(180,120,10,.35)}
 .note-inp{width:100%;margin-top:5px;background:var(--surf2);border:1px solid var(--bdr);border-radius:var(--rs);color:var(--txt);font-family:var(--fnt);font-size:11px;padding:5px 8px;outline:none;transition:border-color .15s}
@@ -129,6 +129,7 @@ header h1{font-size:13px;font-weight:700;letter-spacing:.05em;text-transform:upp
 .day-total-bar{display:flex;align-items:center;justify-content:space-between;padding:7px 13px 9px;border-top:1px solid var(--bdr);background:var(--surf2)}
 .dtl-label{font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--mut)}
 .dtl-val{font-family:var(--mono);font-size:14px;font-weight:700;color:var(--blu)}
+.shift-tot{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--blu);white-space:nowrap;padding:0 4px;align-self:flex-start;margin-top:2px;flex-shrink:0}
 @keyframes spin{to{transform:rotate(360deg)}}
 .spin{display:inline-block;width:9px;height:9px;border:1.5px solid currentColor;border-top-color:transparent;border-radius:50%;animation:spin .7s linear infinite}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.4}}
@@ -506,9 +507,12 @@ const T={
     this.save();
   },
 
-  toggleStat(date){
+  setHoliday(date){
     const e=this.day(date);
-    e.stat=!e.stat;
+    const cur=typeof e.stat==='string'?e.stat:'';
+    const input=prompt(cur?'Edit holiday name (leave blank to remove):':'Enter holiday name (e.g. Easter, Christmas):',cur);
+    if(input===null)return;          // cancelled — no change
+    e.stat=input.trim()||false;      // blank → clear, otherwise store the name
     this.save();this.render();
   },
 
@@ -530,12 +534,13 @@ const T={
         const pbtn=e.active
           ?`<button class="co-btn" onclick="T.tap('${d}')">🔴 Clock Out</button>`
           :`<button class="ci-btn" onclick="T.tap('${d}')">🟢 Clock In</button>`;
-        const statBtn=`<button class="stat-btn${e.stat?' on':''}" onclick="T.toggleStat('${d}')">${e.stat?'⭐ Stat':'☆ Stat'}</button>`;
+        const holName=typeof e.stat==='string'&&e.stat?e.stat:'';
+        const statBtn=`<button class="stat-btn${holName?' on':''}" onclick="T.setHoliday('${d}')" title="${holName||'Mark as holiday'}">${holName?'⭐ '+holName:'+ Holiday'}</button>`;
         h+=`<div class="${cls}"><div class="dhead">
           <div class="dname">${DAYS[dow]}</div>
           <div class="ddate">${this.fd2(d)}</div>
           ${tdy?'<span class="tbadge">Today</span>':''}
-          ${e.stat?'<span class="tbadge" style="background:var(--amb2);color:var(--amb);border-color:rgba(180,120,10,.3)">Stat Holiday</span>':''}
+          ${holName?`<span class="tbadge" style="background:var(--amb2);color:var(--amb);border-color:rgba(180,120,10,.3)">${holName}</span>`:''}
           ${!fut?statBtn:''}
           ${!fut?pbtn:''}
         </div>`;
@@ -562,10 +567,10 @@ const T={
                 <div class="ptline">
                   <span class="pc pc-i">▼ IN ${this.ap(p.in)}</span>
                   <span class="pc pc-o">▲ OUT ${this.ap(p.out)}</span>
-                  <span class="pc pc-d">Shift: ${this.dur(this.ph(p.in,p.out)*3600000)}</span>
                 </div>${lh}
                 <input class="note-inp" type="text" placeholder="Add a note…" value="${(p.note||'').replace(/"/g,'&quot;')}" oninput="T.setNote('${d}',${idx},this.value)">
               </div>
+              <div class="shift-tot">${this.dur(this.ph(p.in,p.out)*3600000)}</div>
               <button class="pdel" onclick="T.del('${d}',${idx})">✕</button>
             </div>`;
           });
