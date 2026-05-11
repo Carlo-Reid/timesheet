@@ -516,6 +516,7 @@ const T={
     if(!e.active){
       e.active=now;e.activeLoc='📍 Getting location…';
       this.save();this.render();toast(`Clocked in at ${this.ap(now)}`);
+      this.notifyPunch(date,true,now);
       this.loc().then(l=>{
         const e2=this.data[date];if(!e2)return;
         if(e2.active===now){e2.activeLoc=l?'📍 '+l:'';}
@@ -529,6 +530,7 @@ const T={
       const idx=e.punches.length-1;
       e.active=null;e.activeLoc='';
       this.save();this.render();toast(`Clocked out at ${this.ap(now)}`);
+      this.notifyPunch(date,false,now,inT);
       this.loc().then(l=>{
         const e2=this.data[date];
         if(e2?.punches?.[idx])e2.punches[idx].lo=l?'📍 '+l:'';
@@ -542,6 +544,22 @@ const T={
     const e=this.data[date];
     if(e?.punches)e.punches.splice(idx,1);
     this.save();this.render();
+  },
+
+  async notifyPunch(date,isIn,time,inTime){
+    if(SCRIPT_URL==='YOUR_GOOGLE_APPS_SCRIPT_URL_HERE')return;
+    const dow=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][new Date(date+'T12:00:00').getDay()];
+    const dateStr=new Date(date+'T12:00:00').toLocaleDateString('en-CA',{month:'short',day:'numeric'});
+    const msg=isIn
+      ?`${this.name} clocked IN at ${this.ap(time)} — ${dow} ${dateStr}`
+      :`${this.name} clocked OUT at ${this.ap(time)} — ${dow} ${dateStr}${inTime?` (Shift: ${this.dur(this.ph(inTime,time)*3600000)})`:''}`;
+    try{
+      await fetch(SCRIPT_URL,{
+        method:'POST',mode:'no-cors',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({action:'notify_punch',message:msg,employee:this.name,type:isIn?'in':'out',date,time})
+      });
+    }catch(e){}
   },
 
   setNote(date,idx,val){
@@ -591,13 +609,11 @@ const T={
         const pbtn=e.active
           ?`<button class="co-btn" onclick="T.tap('${d}')">🔴 Clock Out</button>`
           :`<button class="ci-btn" onclick="T.tap('${d}')">🟢 Clock In</button>`;
-        const statBtn=`<button class="stat-btn${displayHol?' on':''}" onclick="T.setHoliday('${d}')" title="${displayHol||'Mark as holiday'}">${displayHol?'⭐ '+displayHol:'+ Holiday'}</button>`;
         h+=`<div class="${cls}"><div class="dhead">
           <div class="dname">${DAYS[dow]}</div>
           <div class="ddate">${this.fd2(d)}</div>
           ${tdy?'<span class="tbadge">Today</span>':''}
           ${displayHol?`<span class="tbadge" style="background:var(--amb2);color:var(--amb);border-color:rgba(180,120,10,.3)">${displayHol}</span>`:''}
-          ${!fut?statBtn:''}
           ${!fut?pbtn:''}
         </div>`;
         if(displayHol){
